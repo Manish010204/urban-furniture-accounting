@@ -250,6 +250,40 @@ def test_confirming_po_over_budget_shows_non_blocking_warning(client):
     assert "Confirmed" in r.text
 
 
+def test_login_lockout_after_max_failed_attempts(client):
+    client.post("/signup", data={
+        "name": "Lockout Test", "login_id": "lockout1", "email": "lockout1@test.com",
+        "password": "Correct@123", "confirm_password": "Correct@123",
+    })
+    for _ in range(5):
+        r = client.post("/login", data={"login_id": "lockout1", "password": "WrongPass@1"})
+        assert r.status_code == 400
+    # 6th attempt, even with the CORRECT password, should now be blocked by the lockout
+    r = client.post("/login", data={"login_id": "lockout1", "password": "Correct@123"})
+    assert r.status_code == 400
+    assert "Too many failed attempts" in r.text
+
+
+def test_cross_origin_post_is_blocked(client):
+    login(client)
+    r = client.post(
+        "/contacts/new",
+        data={"name": "Should Not Be Created", "type": "vendor"},
+        headers={"Origin": "http://evil.example.com"},
+        follow_redirects=False,
+    )
+    assert r.status_code == 303
+    assert "blocked" in r.headers["location"]
+    r = client.get("/contacts")
+    assert "Should Not Be Created" not in r.text
+
+
+def test_404_page_renders(client):
+    r = client.get("/this-page-does-not-exist")
+    assert r.status_code == 404
+    assert "Page not found" in r.text
+
+
 def test_dashboard_shows_order_status_counts(client):
     login(client)
     r = client.get("/")

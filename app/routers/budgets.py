@@ -19,7 +19,7 @@ router = APIRouter(prefix="/budgets", tags=["budgets"])
 def list_budgets(request: Request, user: User = Depends(require_role("admin", "accountant")),
                   db: Session = Depends(get_db)):
     rows = budget_report(db)
-    return templates.TemplateResponse("budgets/list.html", {
+    return templates.TemplateResponse(request, "budgets/list.html", {
         "request": request, "user": user, "active": "budgets", "rows": rows,
     })
 
@@ -29,7 +29,7 @@ def new_budget_form(request: Request, user: User = Depends(require_role("admin",
                      db: Session = Depends(get_db)):
     analytic_accounts = db.scalars(select(AnalyticAccount).order_by(AnalyticAccount.name)).all()
     contacts = db.scalars(select(Contact).where(Contact.is_archived == False).order_by(Contact.name)).all()  # noqa: E712
-    return templates.TemplateResponse("budgets/form.html", {
+    return templates.TemplateResponse(request, "budgets/form.html", {
         "request": request, "user": user, "active": "budgets",
         "analytic_accounts": analytic_accounts, "contacts": contacts,
     })
@@ -49,7 +49,7 @@ async def create_budget(request: Request, user: User = Depends(require_role("adm
     def render_error(message):
         analytic_accounts = db.scalars(select(AnalyticAccount).order_by(AnalyticAccount.name)).all()
         contacts = db.scalars(select(Contact).where(Contact.is_archived == False).order_by(Contact.name)).all()  # noqa: E712
-        return templates.TemplateResponse("budgets/form.html", {
+        return templates.TemplateResponse(request, "budgets/form.html", {
             "request": request, "user": user, "active": "budgets",
             "analytic_accounts": analytic_accounts, "contacts": contacts, "error": message,
         }, status_code=400)
@@ -93,7 +93,7 @@ def budget_detail(budget_id: int, request: Request, user: User = Depends(require
         return RedirectResponse(url="/budgets?error=Budget+not+found", status_code=303)
     row = next((r for r in budget_report(db) if r["budget"].id == budget.id), None)
     revised_by = db.scalar(select(Budget).where(Budget.revises_budget_id == budget.id))
-    return templates.TemplateResponse("budgets/detail.html", {
+    return templates.TemplateResponse(request, "budgets/detail.html", {
         "request": request, "user": user, "active": "budgets", "budget": budget, "row": row,
         "revised_by": revised_by,
     })
@@ -134,7 +134,7 @@ def revise_budget_form(budget_id: int, request: Request, user: User = Depends(re
     if budget.status != BudgetStatus.confirmed:
         return RedirectResponse(url=f"/budgets/{budget.id}?error=Only+confirmed+budgets+can+be+revised", status_code=303)
     suggested_name = budget.name if "Revised" in budget.name else f"{budget.name} Revised"
-    return templates.TemplateResponse("budgets/revise.html", {
+    return templates.TemplateResponse(request, "budgets/revise.html", {
         "request": request, "user": user, "active": "budgets", "budget": budget, "suggested_name": suggested_name,
     })
 

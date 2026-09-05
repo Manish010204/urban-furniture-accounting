@@ -1,5 +1,5 @@
 import enum
-from datetime import date as date_type, datetime
+from datetime import date as date_type, datetime, timezone
 
 from sqlalchemy import (
     Date,
@@ -115,6 +115,8 @@ class User(Base):
     password_hash: Mapped[str] = mapped_column(String(255))
     role: Mapped[UserRole] = mapped_column(Enum(UserRole))
     contact_id: Mapped[int | None] = mapped_column(ForeignKey("contacts.id"), nullable=True)
+    failed_login_attempts: Mapped[int] = mapped_column(Integer, default=0)
+    locked_until: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     contact: Mapped["Contact"] = relationship(back_populates="users")
 
@@ -137,7 +139,7 @@ class Contact(Base):
     pincode: Mapped[str | None] = mapped_column(String(15), nullable=True)
     profile_image_path: Mapped[str | None] = mapped_column(String(255), nullable=True)
     is_archived: Mapped[bool] = mapped_column(default=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     users: Mapped[list["User"]] = relationship(back_populates="contact")
 

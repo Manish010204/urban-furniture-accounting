@@ -9,11 +9,11 @@
     <form method="post" action="/login">
       <div class="field">
         <label>Login Id</label>
-        <input type="text" name="login_id" required autofocus value="{{ login_id or '' }}">
+        <input type="text" name="login_id" required autofocus autocomplete="username" value="{{ login_id or '' }}">
       </div>
       <div class="field">
         <label>Password</label>
-        <input type="password" name="password" required>
+        <input type="password" name="password" required autocomplete="current-password">
       </div>
       <div class="btn-row">
         <button class="btn primary" type="submit" style="width:100%;justify-content:center;">Sign In</button>

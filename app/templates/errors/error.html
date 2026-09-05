@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}{{ code }} — Urban Furniture Accounting{% endblock %}
+{% block guest_content %}
+<div class="login-wrap">
+  <div class="login-card" style="text-align:center;">
+    <div style="font-size:40px;font-weight:700;color:var(--primary-dark);">{{ code }}</div>
+    <h1 style="margin:8px 0;font-size:18px;">{{ heading }}</h1>
+    <p class="help-text" style="margin-bottom:18px;">{{ message }}</p>
+    <a class="btn primary" href="/">Back to Dashboard</a>
+  </div>
+</div>
+{% endblock %}

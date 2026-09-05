@@ -56,7 +56,7 @@ def home(request: Request, user: User = Depends(require_login), db: Session = De
                                     (BudgetStatus.confirmed, BudgetStatus.revised), BudgetStatus.draft,
                                     BudgetStatus.cancelled)
 
-    return templates.TemplateResponse("dashboard/index.html", {
+    return templates.TemplateResponse(request, "dashboard/index.html", {
         "request": request, "user": user, "active": "dashboard",
         "total_sales": total_sales, "total_purchases": total_purchases,
         "receivables": debtors, "payables": creditors, "cash": cash, "bank": bank,
@@ -75,7 +75,7 @@ def _contact_home(request: Request, user: User, db: Session):
         select(VendorBill).where(VendorBill.vendor_id == user.contact_id)
         .order_by(VendorBill.id.desc())
     ).all() if user.contact_id else []
-    return templates.TemplateResponse("dashboard/contact_home.html", {
+    return templates.TemplateResponse(request, "dashboard/contact_home.html", {
         "request": request, "user": user, "active": "my_invoices",
         "invoices": invoices, "bills": bills,
     })

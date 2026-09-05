@@ -18,7 +18,7 @@ router = APIRouter(prefix="/journal-entries", tags=["journal_entries"])
 def list_entries(request: Request, user: User = Depends(require_role("admin", "accountant")),
                   db: Session = Depends(get_db)):
     entries = db.scalars(select(JournalEntry).order_by(JournalEntry.id.desc())).all()
-    return templates.TemplateResponse("journal_entries/list.html", {
+    return templates.TemplateResponse(request, "journal_entries/list.html", {
         "request": request, "user": user, "active": "journal_entries", "entries": entries,
     })
 
@@ -29,7 +29,7 @@ def new_entry_form(request: Request, user: User = Depends(require_role("admin", 
     journals = db.scalars(select(Journal).order_by(Journal.name)).all()
     accounts = db.scalars(select(Account).order_by(Account.name)).all()
     contacts = db.scalars(select(Contact).where(Contact.is_archived == False).order_by(Contact.name)).all()  # noqa: E712
-    return templates.TemplateResponse("journal_entries/form.html", {
+    return templates.TemplateResponse(request, "journal_entries/form.html", {
         "request": request, "user": user, "active": "journal_entries",
         "journals": journals, "accounts": accounts, "contacts": contacts, "today": date.today().isoformat(),
     })
@@ -69,7 +69,7 @@ async def create_entry(request: Request, user: User = Depends(require_role("admi
         db.commit()
     except UnbalancedEntryError as e:
         db.rollback()
-        return templates.TemplateResponse("journal_entries/form.html", {
+        return templates.TemplateResponse(request, "journal_entries/form.html", {
             "request": request, "user": user, "active": "journal_entries",
             "journals": journals, "accounts": accounts, "contacts": contacts,
             "today": entry_date.isoformat(), "error": str(e),
@@ -83,6 +83,6 @@ def entry_detail(entry_id: int, request: Request, user: User = Depends(require_r
     entry = db.get(JournalEntry, entry_id)
     if not entry:
         return RedirectResponse(url="/journal-entries?error=Entry+not+found", status_code=303)
-    return templates.TemplateResponse("journal_entries/detail.html", {
+    return templates.TemplateResponse(request, "journal_entries/detail.html", {
         "request": request, "user": user, "active": "journal_entries", "entry": entry,
     })

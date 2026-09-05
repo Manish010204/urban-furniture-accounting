@@ -18,7 +18,7 @@ def list_accounts(request: Request, user: User = Depends(require_role("admin", "
                    db: Session = Depends(get_db)):
     accounts = db.scalars(select(Account).order_by(Account.type, Account.name)).all()
     balances = {a.id: account_balance(db, a) for a in accounts}
-    return templates.TemplateResponse("accounts/list.html", {
+    return templates.TemplateResponse(request, "accounts/list.html", {
         "request": request, "user": user, "active": "accounts",
         "accounts": accounts, "balances": balances,
     })
@@ -26,7 +26,7 @@ def list_accounts(request: Request, user: User = Depends(require_role("admin", "
 
 @router.get("/new")
 def new_account_form(request: Request, user: User = Depends(require_role("admin", "accountant"))):
-    return templates.TemplateResponse("accounts/form.html", {
+    return templates.TemplateResponse(request, "accounts/form.html", {
         "request": request, "user": user, "active": "accounts", "account": None,
     })
 
@@ -41,7 +41,7 @@ def create_account(request: Request, name: str = Form(...), type: str = Form(...
         db.add(account)
         db.commit()
     except ValidationError as e:
-        return templates.TemplateResponse("accounts/form.html", {
+        return templates.TemplateResponse(request, "accounts/form.html", {
             "request": request, "user": user, "active": "accounts", "account": None, "error": e.message,
         }, status_code=400)
     return RedirectResponse(url="/accounts?success=Account+created", status_code=303)
@@ -53,7 +53,7 @@ def edit_account_form(account_id: int, request: Request, user: User = Depends(re
     account = db.get(Account, account_id)
     if not account:
         return RedirectResponse(url="/accounts?error=Account+not+found", status_code=303)
-    return templates.TemplateResponse("accounts/form.html", {
+    return templates.TemplateResponse(request, "accounts/form.html", {
         "request": request, "user": user, "active": "accounts", "account": account,
     })
 
@@ -73,7 +73,7 @@ def update_account(account_id: int, request: Request, name: str = Form(...), typ
         account.code = code or None
         db.commit()
     except ValidationError as e:
-        return templates.TemplateResponse("accounts/form.html", {
+        return templates.TemplateResponse(request, "accounts/form.html", {
             "request": request, "user": user, "active": "accounts", "account": account, "error": e.message,
         }, status_code=400)
     return RedirectResponse(url="/accounts?success=Account+updated", status_code=303)

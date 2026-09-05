@@ -53,7 +53,7 @@ def list_purchase_orders(request: Request, user: User = Depends(require_role("ad
                           db: Session = Depends(get_db)):
     orders = db.scalars(select(PurchaseOrder).order_by(PurchaseOrder.id.desc())).all()
     bills = db.scalars(select(VendorBill).order_by(VendorBill.id.desc())).all()
-    return templates.TemplateResponse("purchases/list.html", {
+    return templates.TemplateResponse(request, "purchases/list.html", {
         "request": request, "user": user, "active": "purchases", "orders": orders, "bills": bills,
     })
 
@@ -61,7 +61,7 @@ def list_purchase_orders(request: Request, user: User = Depends(require_role("ad
 @router.get("/new")
 def new_po_form(request: Request, vendor_id: int = None, user: User = Depends(require_role("admin", "accountant")),
                 db: Session = Depends(get_db)):
-    return templates.TemplateResponse("purchases/form.html", {
+    return templates.TemplateResponse(request, "purchases/form.html", {
         "request": request, "user": user, "active": "purchases",
         "vendors": _vendors(db), "products": _products(db), "analytic_accounts": _analytic_accounts(db),
         "today": date.today().isoformat(), "selected_vendor_id": vendor_id,
@@ -80,7 +80,7 @@ async def create_po(request: Request, user: User = Depends(require_role("admin",
     analytic_ids = form.getlist("analytic_account_id")
 
     def render_error(message):
-        return templates.TemplateResponse("purchases/form.html", {
+        return templates.TemplateResponse(request, "purchases/form.html", {
             "request": request, "user": user, "active": "purchases",
             "vendors": _vendors(db), "products": _products(db), "analytic_accounts": _analytic_accounts(db),
             "today": po_date.isoformat(), "error": message,
@@ -123,7 +123,7 @@ def po_detail(po_id: int, request: Request, user: User = Depends(require_role("a
     po = db.get(PurchaseOrder, po_id)
     if not po:
         return RedirectResponse(url="/purchases?error=Purchase+order+not+found", status_code=303)
-    return templates.TemplateResponse("purchases/detail.html", {
+    return templates.TemplateResponse(request, "purchases/detail.html", {
         "request": request, "user": user, "active": "purchases", "po": po,
     })
 
@@ -182,7 +182,7 @@ def convert_po_form(po_id: int, request: Request, user: User = Depends(require_r
     if po.status != POStatus.confirmed:
         return RedirectResponse(url=f"/purchases/{po.id}?error=Confirm+the+order+before+creating+a+bill", status_code=303)
     today = date.today()
-    return templates.TemplateResponse("purchases/convert.html", {
+    return templates.TemplateResponse(request, "purchases/convert.html", {
         "request": request, "user": user, "active": "purchases", "po": po,
         "invoice_date": today.isoformat(), "due_date": (today + timedelta(days=15)).isoformat(),
     })
@@ -229,7 +229,7 @@ def bill_detail(bill_id: int, request: Request,
         return RedirectResponse(url="/purchases?error=Vendor+bill+not+found", status_code=303)
     if user.role.value == "contact" and bill.vendor_id != user.contact_id:
         return RedirectResponse(url="/?error=You+can+only+view+your+own+bills", status_code=303)
-    return templates.TemplateResponse("purchases/bill_detail.html", {
+    return templates.TemplateResponse(request, "purchases/bill_detail.html", {
         "request": request, "user": user, "active": "purchases", "bill": bill,
     })
 
@@ -244,7 +244,7 @@ def pay_bill_form(bill_id: int, request: Request,
         return RedirectResponse(url="/?error=You+can+only+pay+your+own+bills", status_code=303)
     if bill.status.value == "paid":
         return RedirectResponse(url=f"/purchases/bills/{bill.id}?error=Bill+is+already+fully+paid", status_code=303)
-    return templates.TemplateResponse("purchases/pay_bill.html", {
+    return templates.TemplateResponse(request, "purchases/pay_bill.html", {
         "request": request, "user": user, "active": "purchases", "bill": bill, "today": date.today().isoformat(),
     })
 
@@ -260,7 +260,7 @@ def pay_bill(bill_id: int, request: Request, amount: float = Form(...), method: 
         return RedirectResponse(url="/?error=You+can+only+pay+your+own+bills", status_code=303)
 
     def render_error(message):
-        return templates.TemplateResponse("purchases/pay_bill.html", {
+        return templates.TemplateResponse(request, "purchases/pay_bill.html", {
             "request": request, "user": user, "active": "purchases", "bill": bill,
             "today": date.today().isoformat(), "error": message,
         }, status_code=400)

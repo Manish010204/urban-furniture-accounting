@@ -40,7 +40,7 @@ def list_contacts(request: Request, q: str = "", type: str = "", show_archived: 
     if type:
         stmt = stmt.where(Contact.type == ContactType(type))
     contacts = db.scalars(stmt.order_by(Contact.name)).all()
-    return templates.TemplateResponse("contacts/list.html", {
+    return templates.TemplateResponse(request, "contacts/list.html", {
         "request": request, "user": user, "active": "contacts",
         "contacts": contacts, "q": q, "type": type, "show_archived": show_archived, "view": view,
     })
@@ -48,7 +48,7 @@ def list_contacts(request: Request, q: str = "", type: str = "", show_archived: 
 
 @router.get("/new")
 def new_contact_form(request: Request, user: User = Depends(require_role("admin", "accountant"))):
-    return templates.TemplateResponse("contacts/form.html", {
+    return templates.TemplateResponse(request, "contacts/form.html", {
         "request": request, "user": user, "active": "contacts", "contact": None,
     })
 
@@ -82,7 +82,7 @@ def create_contact(
         _save_profile_image(contact, profile_image)
         db.commit()
     except ValidationError as e:
-        return templates.TemplateResponse("contacts/form.html", {
+        return templates.TemplateResponse(request, "contacts/form.html", {
             "request": request, "user": user, "active": "contacts", "contact": None, "error": e.message,
             "form": {"name": name, "type": type, "email": email, "mobile": mobile, "city": city,
                      "state": state, "pincode": pincode},
@@ -96,7 +96,7 @@ def contact_detail(contact_id: int, request: Request,
     contact = db.get(Contact, contact_id)
     if not contact:
         return RedirectResponse(url="/contacts?error=Contact+not+found", status_code=303)
-    return templates.TemplateResponse("contacts/detail.html", {
+    return templates.TemplateResponse(request, "contacts/detail.html", {
         "request": request, "user": user, "active": "contacts", "contact": contact,
     })
 
@@ -107,7 +107,7 @@ def edit_contact_form(contact_id: int, request: Request,
     contact = db.get(Contact, contact_id)
     if not contact:
         return RedirectResponse(url="/contacts?error=Contact+not+found", status_code=303)
-    return templates.TemplateResponse("contacts/form.html", {
+    return templates.TemplateResponse(request, "contacts/form.html", {
         "request": request, "user": user, "active": "contacts", "contact": contact,
     })
 
@@ -147,7 +147,7 @@ def update_contact(
         _save_profile_image(contact, profile_image)
         db.commit()
     except ValidationError as e:
-        return templates.TemplateResponse("contacts/form.html", {
+        return templates.TemplateResponse(request, "contacts/form.html", {
             "request": request, "user": user, "active": "contacts", "contact": contact, "error": e.message,
         }, status_code=400)
     return RedirectResponse(url=f"/contacts/{contact.id}?success=Contact+updated", status_code=303)

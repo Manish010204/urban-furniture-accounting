@@ -51,7 +51,7 @@ def list_sales_orders(request: Request, user: User = Depends(require_role("admin
                        db: Session = Depends(get_db)):
     orders = db.scalars(select(SalesOrder).order_by(SalesOrder.id.desc())).all()
     invoices = db.scalars(select(CustomerInvoice).order_by(CustomerInvoice.id.desc())).all()
-    return templates.TemplateResponse("sales/list.html", {
+    return templates.TemplateResponse(request, "sales/list.html", {
         "request": request, "user": user, "active": "sales", "orders": orders, "invoices": invoices,
     })
 
@@ -59,7 +59,7 @@ def list_sales_orders(request: Request, user: User = Depends(require_role("admin
 @router.get("/new")
 def new_so_form(request: Request, customer_id: int = None, user: User = Depends(require_role("admin", "accountant")),
                 db: Session = Depends(get_db)):
-    return templates.TemplateResponse("sales/form.html", {
+    return templates.TemplateResponse(request, "sales/form.html", {
         "request": request, "user": user, "active": "sales",
         "customers": _customers(db), "products": _products(db), "analytic_accounts": _analytic_accounts(db),
         "today": date.today().isoformat(), "selected_customer_id": customer_id,
@@ -79,7 +79,7 @@ async def create_so(request: Request, user: User = Depends(require_role("admin",
     analytic_ids = form.getlist("analytic_account_id")
 
     def render_error(message):
-        return templates.TemplateResponse("sales/form.html", {
+        return templates.TemplateResponse(request, "sales/form.html", {
             "request": request, "user": user, "active": "sales",
             "customers": _customers(db), "products": _products(db), "analytic_accounts": _analytic_accounts(db),
             "today": so_date.isoformat(), "error": message,
@@ -124,7 +124,7 @@ def so_detail(so_id: int, request: Request, user: User = Depends(require_role("a
     so = db.get(SalesOrder, so_id)
     if not so:
         return RedirectResponse(url="/sales?error=Sales+order+not+found", status_code=303)
-    return templates.TemplateResponse("sales/detail.html", {
+    return templates.TemplateResponse(request, "sales/detail.html", {
         "request": request, "user": user, "active": "sales", "so": so,
     })
 
@@ -164,7 +164,7 @@ def generate_invoice_form(so_id: int, request: Request, user: User = Depends(req
     if so.status != SOStatus.confirmed:
         return RedirectResponse(url=f"/sales/{so.id}?error=Confirm+the+order+before+creating+an+invoice", status_code=303)
     today = date.today()
-    return templates.TemplateResponse("sales/generate_invoice.html", {
+    return templates.TemplateResponse(request, "sales/generate_invoice.html", {
         "request": request, "user": user, "active": "sales", "so": so,
         "invoice_date": today.isoformat(), "due_date": (today + timedelta(days=15)).isoformat(),
     })
@@ -212,7 +212,7 @@ def invoice_detail(invoice_id: int, request: Request,
         return RedirectResponse(url="/sales?error=Invoice+not+found", status_code=303)
     if user.role.value == "contact" and invoice.customer_id != user.contact_id:
         return RedirectResponse(url="/?error=You+can+only+view+your+own+invoices", status_code=303)
-    return templates.TemplateResponse("sales/invoice_detail.html", {
+    return templates.TemplateResponse(request, "sales/invoice_detail.html", {
         "request": request, "user": user, "active": "sales", "invoice": invoice,
     })
 
@@ -227,7 +227,7 @@ def pay_invoice_form(invoice_id: int, request: Request,
         return RedirectResponse(url="/?error=You+can+only+pay+your+own+invoices", status_code=303)
     if invoice.status.value == "paid":
         return RedirectResponse(url=f"/sales/invoices/{invoice.id}?error=Invoice+is+already+fully+paid", status_code=303)
-    return templates.TemplateResponse("sales/pay_invoice.html", {
+    return templates.TemplateResponse(request, "sales/pay_invoice.html", {
         "request": request, "user": user, "active": "sales", "invoice": invoice, "today": date.today().isoformat(),
     })
 
@@ -243,7 +243,7 @@ def pay_invoice(invoice_id: int, request: Request, amount: float = Form(...), me
         return RedirectResponse(url="/?error=You+can+only+pay+your+own+invoices", status_code=303)
 
     def render_error(message):
-        return templates.TemplateResponse("sales/pay_invoice.html", {
+        return templates.TemplateResponse(request, "sales/pay_invoice.html", {
             "request": request, "user": user, "active": "sales", "invoice": invoice,
             "today": date.today().isoformat(), "error": message,
         }, status_code=400)

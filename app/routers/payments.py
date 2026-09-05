@@ -14,6 +14,6 @@ router = APIRouter(prefix="/payments", tags=["payments"])
 def list_payments(request: Request, user: User = Depends(require_role("admin", "accountant")),
                    db: Session = Depends(get_db)):
     payments = db.scalars(select(Payment).order_by(Payment.id.desc())).all()
-    return templates.TemplateResponse("payments/list.html", {
+    return templates.TemplateResponse(request, "payments/list.html", {
         "request": request, "user": user, "active": "payments", "payments": payments,
     })

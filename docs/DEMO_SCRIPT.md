@@ -18,10 +18,14 @@ Open **http://127.0.0.1:8000**.
 
 ## 0. Login / Roles (30 sec)
 
-- On the login page, click **Sign in** next to **Admin User**.
-- Point out the role list: Admin, Accountant, Contact — mention "Switch
-  User" (top right) lets you jump roles instantly for the demo without a
-  password, since this is a prototype.
+- On the login page, sign in as **Admin User** (Login ID `admin1`, password
+  `Admin@123`) — real authentication: hashed password, signed session
+  cookie, account lockout after repeated failed attempts.
+- Mention the **Sign Up** link creates a real Accountant account on the
+  spot (with live validation — unique Login ID, unique email, password
+  complexity) if you want to show that flow.
+- Point out the role list: Admin, Accountant, Contact — use "Sign Out"
+  (top right) to switch users during the demo.
 
 ## 1. Master Data (1 min)
 
@@ -99,13 +103,14 @@ Open **http://127.0.0.1:8000**.
 
 ## 5. Roles, quickly (1 min, optional)
 
-- **Switch User → Nimesh Pathak (Contact)**: the sidebar collapses to "My
-  Invoices & Bills" — only their own invoice is visible, with a "Make
-  Payment" action. Try navigating directly to `/contacts` — redirected
-  home, proving the role guard works.
-- **Switch User → Priya Verma (Accountant)**: full navigation is back, but
-  opening a contact and trying to Edit — redirected with a permission
-  message, since only Admin can modify/archive master data per the spec's
+- **Sign Out, sign in as Nimesh Pathak** (`nimesh1` / `Nimesh@123`, Contact
+  role): the nav collapses to "My Invoices & Bills" — only their own
+  invoice is visible, with a "Make Payment" action. Try navigating
+  directly to `/contacts` — redirected home, proving the role guard works.
+- **Sign in as Priya Verma** (`priya1` / `Priya@123`, Accountant): full
+  navigation is back, but opening a contact and trying to Edit —
+  redirected with a permission message, since only Admin can modify/archive
+  master data per the spec's
   role table.
 
 ## Wrap-up

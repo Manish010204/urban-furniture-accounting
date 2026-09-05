@@ -50,8 +50,8 @@ simple demo login/role switcher — no OAuth/JWT, per the prototype's scope.
 - **Frontend**: server-rendered Jinja2 templates, plain CSS design system,
   small vanilla-JS snippets for dynamic form rows and live totals — no SPA
   framework.
-- **Auth**: cookie session (Starlette `SessionMiddleware`); `/login` lists
-  the seeded demo users and signs you in with one click.
+- **Auth**: Login ID + password (PBKDF2-hashed, salted), a signed session
+  cookie (Starlette `SessionMiddleware`), role-based route guards.
 - **Business logic**: plain modules under `app/services/` (`tax.py`,
   `accounting.py`, `reports.py`) called directly from routers — no
   repository/interface layers, no microservices.
@@ -59,6 +59,23 @@ simple demo login/role switcher — no OAuth/JWT, per the prototype's scope.
 One application, one database, simple domain services, simple UI, simple
 testing — see `docs/IMPLEMENTATION_PLAN.md` for the full rationale and
 package layout.
+
+### Security hardening
+
+- **Password storage**: PBKDF2-HMAC-SHA256, 100,000 iterations, unique
+  16-byte salt per user, constant-time comparison (`app/security.py`).
+- **Secrets**: the session-signing key comes from the `SECRET_KEY`
+  environment variable (`app/config.py`), never hardcoded — the app
+  refuses to start with a missing key when `ENVIRONMENT=production`.
+- **Session cookie**: `SameSite=Strict`, `HttpOnly` (default), `Secure`
+  when `ENVIRONMENT=production`, and a bounded lifetime.
+- **CSRF**: `SameSite=Strict` cookies plus an Origin/Referer host-match
+  check on every state-changing request (`app/main.py`) — a cross-site
+  form can't ride an authenticated session.
+- **Brute-force protection**: an account locks for `LOGIN_LOCKOUT_MINUTES`
+  after `LOGIN_MAX_FAILED_ATTEMPTS` consecutive wrong passwords.
+- **Error handling**: unhandled exceptions are logged server-side and shown
+  to the user as a generic error page — no stack traces leak to the browser.
 
 ## 4. Setup Instructions
 
@@ -69,6 +86,18 @@ git clone https://github.com/Manish010204/urban-furniture-accounting.git
 cd urban-furniture-accounting
 pip install -r requirements.txt
 ```
+
+**Configuration**: copy `.env.example` to `.env` and set a real `SECRET_KEY`
+(used to sign session cookies):
+
+```bash
+cp .env.example .env
+python -c "import secrets; print(secrets.token_hex(32))"   # paste the output as SECRET_KEY in .env
+```
+
+Without a `.env` file the app still runs locally using an insecure
+placeholder key (fine for local development, refused if `ENVIRONMENT=production`
+is set without a real `SECRET_KEY` — see `app/config.py`).
 
 ## 5. Run Instructions
 
@@ -87,30 +116,32 @@ state at any time, stop the server and delete `data/app.db`.
 python -m pytest -q
 ```
 
-Runs 24 tests across three files:
+Runs 40 tests across three files:
 - `tests/test_smoke.py` — the app starts, connects to SQLite, every major
   page loads, master data can be created, a full purchase-to-payment
-  transaction works, reports render.
+  transaction works, reports render, login/signup/lockout/CSRF/404 behave
+  correctly.
 - `tests/test_domain.py` — tax calculation, purchase/sales totals,
   debit/credit balance validation, the four core accounting postings,
   P&L, Balance Sheet, and budget variance — all as isolated unit tests
   against an in-memory database.
 - `tests/test_e2e.py` — the two critical end-to-end workflows (purchase
-  and sales) driven entirely through the HTTP layer, including the
-  validation guards (duplicate invoice, overpayment).
+  and sales) driven entirely through the HTTP layer, including the Confirm
+  step and validation guards (duplicate invoice, overpayment).
 
 ## 7. Demo Credentials / Roles
 
-There is no password. `/login` lists every seeded user — click "Sign in":
+Real Login ID + password authentication (see [Security hardening](#security-hardening)).
+Sign in at `/login` with one of the seeded users below, or create a new
+Accountant account at `/signup`:
 
-| User | Role | Can do |
-|---|---|---|
-| Admin User | Admin | Create/modify/archive master data, record transactions, view reports |
-| Priya Verma (Accountant) | Accountant | Create master data, record transactions, view reports (no edit/archive) |
-| Nimesh Pathak (Contact) | Contact | View only their own invoices/bills, make payment |
+| User | Login ID | Password | Role | Can do |
+|---|---|---|---|---|
+| Admin User | `admin1` | `Admin@123` | Admin | Create/modify/archive master data, record transactions, view reports |
+| Priya Verma | `priya1` | `Priya@123` | Accountant | Create master data, record transactions, view reports (no edit/archive) |
+| Nimesh Pathak | `nimesh1` | `Nimesh@123` | Contact | View only their own invoices/bills, make payment |
 
-Use "Switch User" (top-right, once logged in) to jump between roles at any
-time during a demo.
+Use "Sign Out" (top-right) to switch users during a demo.
 
 ## 8. Demo Workflow
 

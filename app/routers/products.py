@@ -40,7 +40,7 @@ def list_products(request: Request, q: str = "", type: str = "", show_archived: 
     if type:
         stmt = stmt.where(Product.type == ProductType(type))
     products = db.scalars(stmt.order_by(Product.name)).all()
-    return templates.TemplateResponse("products/list.html", {
+    return templates.TemplateResponse(request, "products/list.html", {
         "request": request, "user": user, "active": "products",
         "products": products, "q": q, "type": type, "show_archived": show_archived, "view": view,
     })
@@ -48,7 +48,7 @@ def list_products(request: Request, q: str = "", type: str = "", show_archived: 
 
 @router.get("/new")
 def new_product_form(request: Request, user: User = Depends(require_role("admin", "accountant"))):
-    return templates.TemplateResponse("products/form.html", {
+    return templates.TemplateResponse(request, "products/form.html", {
         "request": request, "user": user, "active": "products", "product": None,
     })
 
@@ -79,7 +79,7 @@ def create_product(
         _save_product_image(product, image)
         db.commit()
     except ValidationError as e:
-        return templates.TemplateResponse("products/form.html", {
+        return templates.TemplateResponse(request, "products/form.html", {
             "request": request, "user": user, "active": "products", "product": None, "error": e.message,
         }, status_code=400)
     return RedirectResponse(url=f"/products/{product.id}?success=Product+created", status_code=303)
@@ -91,7 +91,7 @@ def product_detail(product_id: int, request: Request,
     product = db.get(Product, product_id)
     if not product:
         return RedirectResponse(url="/products?error=Product+not+found", status_code=303)
-    return templates.TemplateResponse("products/detail.html", {
+    return templates.TemplateResponse(request, "products/detail.html", {
         "request": request, "user": user, "active": "products", "product": product,
     })
 
@@ -102,7 +102,7 @@ def edit_product_form(product_id: int, request: Request,
     product = db.get(Product, product_id)
     if not product:
         return RedirectResponse(url="/products?error=Product+not+found", status_code=303)
-    return templates.TemplateResponse("products/form.html", {
+    return templates.TemplateResponse(request, "products/form.html", {
         "request": request, "user": user, "active": "products", "product": product,
     })
 
@@ -136,7 +136,7 @@ def update_product(
         _save_product_image(product, image)
         db.commit()
     except ValidationError as e:
-        return templates.TemplateResponse("products/form.html", {
+        return templates.TemplateResponse(request, "products/form.html", {
             "request": request, "user": user, "active": "products", "product": product, "error": e.message,
         }, status_code=400)
     return RedirectResponse(url=f"/products/{product.id}?success=Product+updated", status_code=303)

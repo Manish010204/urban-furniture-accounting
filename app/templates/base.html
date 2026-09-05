@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}Urban Furniture Accounting{% endblock %}</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🪑</text></svg>">
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
@@ -19,39 +20,39 @@
     <nav class="topnav-menu">
       <a class="topnav-link {{ 'active' if active=='dashboard' }}" href="/">Dashboard</a>
       <div class="dropdown">
-        <button type="button" class="topnav-link dropdown-toggle {{ 'active' if active in sales_group }}">Sales ▾</button>
-        <div class="dropdown-panel">
-          <a href="/sales">Sales Order</a>
-          <a href="/sales#invoices">Sale Invoice</a>
-          <a href="/payments">Receipt</a>
+        <button type="button" class="topnav-link dropdown-toggle {{ 'active' if active in sales_group }}" aria-haspopup="true" aria-expanded="false">Sales ▾</button>
+        <div class="dropdown-panel" role="menu">
+          <a href="/sales" role="menuitem">Sales Order</a>
+          <a href="/sales#invoices" role="menuitem">Sale Invoice</a>
+          <a href="/payments" role="menuitem">Receipt</a>
         </div>
       </div>
       <div class="dropdown">
-        <button type="button" class="topnav-link dropdown-toggle {{ 'active' if active in purchase_group }}">Purchase ▾</button>
-        <div class="dropdown-panel">
-          <a href="/purchases">Purchase Order</a>
-          <a href="/purchases#bills">Purchase Bill</a>
-          <a href="/payments">Payment</a>
+        <button type="button" class="topnav-link dropdown-toggle {{ 'active' if active in purchase_group }}" aria-haspopup="true" aria-expanded="false">Purchase ▾</button>
+        <div class="dropdown-panel" role="menu">
+          <a href="/purchases" role="menuitem">Purchase Order</a>
+          <a href="/purchases#bills" role="menuitem">Purchase Bill</a>
+          <a href="/payments" role="menuitem">Payment</a>
         </div>
       </div>
       <div class="dropdown">
-        <button type="button" class="topnav-link dropdown-toggle {{ 'active' if active in account_group }}">Account ▾</button>
-        <div class="dropdown-panel">
-          <a href="/contacts">Contact</a>
-          <a href="/products">Product</a>
-          <a href="/analytic-accounts">Analyticals</a>
-          <a href="/budgets">Analytical Budget</a>
-          <a href="/accounts">Chart of Account</a>
-          <a href="/journals">Journals</a>
-          <a href="/journal-entries">Journal Entries</a>
+        <button type="button" class="topnav-link dropdown-toggle {{ 'active' if active in account_group }}" aria-haspopup="true" aria-expanded="false">Account ▾</button>
+        <div class="dropdown-panel" role="menu">
+          <a href="/contacts" role="menuitem">Contact</a>
+          <a href="/products" role="menuitem">Product</a>
+          <a href="/analytic-accounts" role="menuitem">Analyticals</a>
+          <a href="/budgets" role="menuitem">Analytical Budget</a>
+          <a href="/accounts" role="menuitem">Chart of Account</a>
+          <a href="/journals" role="menuitem">Journals</a>
+          <a href="/journal-entries" role="menuitem">Journal Entries</a>
         </div>
       </div>
       <div class="dropdown">
-        <button type="button" class="topnav-link dropdown-toggle {{ 'active' if active in report_group }}">Report ▾</button>
-        <div class="dropdown-panel">
-          <a href="/reports/balance-sheet">Balance Sheet</a>
-          <a href="/reports/profit-loss">Profit and Loss</a>
-          <a href="/reports/budget">Budget Report</a>
+        <button type="button" class="topnav-link dropdown-toggle {{ 'active' if active in report_group }}" aria-haspopup="true" aria-expanded="false">Report ▾</button>
+        <div class="dropdown-panel" role="menu">
+          <a href="/reports/balance-sheet" role="menuitem">Balance Sheet</a>
+          <a href="/reports/profit-loss" role="menuitem">Profit and Loss</a>
+          <a href="/reports/budget" role="menuitem">Budget Report</a>
         </div>
       </div>
     </nav>
@@ -82,21 +83,36 @@
   </div>
 </div>
 <script>
+function closeAllDropdowns() {
+  document.querySelectorAll('.dropdown-panel.open').forEach(function (p) { p.classList.remove('open'); });
+  document.querySelectorAll('.dropdown-toggle[aria-expanded="true"]').forEach(function (b) { b.setAttribute('aria-expanded', 'false'); });
+}
 document.querySelectorAll('.dropdown-toggle').forEach(function (btn) {
   btn.addEventListener('click', function (e) {
     e.stopPropagation();
     var panel = btn.nextElementSibling;
     var isOpen = panel.classList.contains('open');
-    document.querySelectorAll('.dropdown-panel.open').forEach(function (p) { p.classList.remove('open'); });
-    if (!isOpen) panel.classList.add('open');
+    closeAllDropdowns();
+    if (!isOpen) { panel.classList.add('open'); btn.setAttribute('aria-expanded', 'true'); }
   });
 });
-document.addEventListener('click', function () {
-  document.querySelectorAll('.dropdown-panel.open').forEach(function (p) { p.classList.remove('open'); });
+document.addEventListener('click', closeAllDropdowns);
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape') closeAllDropdowns();
 });
 </script>
 {% else %}
   {% block guest_content %}{% endblock %}
 {% endif %}
+<script>
+// Prevent accidental double-submission of forms (e.g. double-click on Pay/Confirm/Sign In).
+document.querySelectorAll('form').forEach(function (form) {
+  form.addEventListener('submit', function () {
+    form.querySelectorAll('button[type=submit], button:not([type])').forEach(function (btn) {
+      btn.disabled = true;
+    });
+  });
+});
+</script>
 </body>
 </html>
