@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Journal Entry JE-{{ entry.id }}{% endblock %}
+{% block heading %}Journal Entry JE-{{ entry.id }}{% endblock %}
+{% block content %}
+<div class="panel" style="max-width:760px;">
+  <div class="panel-header"><h2>{{ entry.journal.name }} — {{ entry.date }}</h2>
+    {% if entry.total_debit == entry.total_credit %}<span class="badge green">Balanced</span>{% else %}<span class="badge red">Unbalanced</span>{% endif %}
+  </div>
+  <div class="panel-body">
+    <div class="kv"><span class="k">Reference</span><span class="v">{{ entry.reference or '—' }}</span></div>
+    <table style="margin-top:14px;">
+      <thead><tr><th>Account</th><th>Debit</th><th>Credit</th></tr></thead>
+      <tbody>
+      {% for line in entry.lines %}
+        <tr>
+          <td>{{ line.account.name }}{% if line.analytic_account %} <span class="badge gray">{{ line.analytic_account.name }}</span>{% endif %}</td>
+          <td class="num">{{ "₹%.2f"|format(line.debit) if line.debit else '' }}</td>
+          <td class="num">{{ "₹%.2f"|format(line.credit) if line.credit else '' }}</td>
+        </tr>
+      {% endfor %}
+      <tr>
+        <td><strong>Total</strong></td>
+        <td class="num"><strong>₹{{ "%.2f"|format(entry.total_debit) }}</strong></td>
+        <td class="num"><strong>₹{{ "%.2f"|format(entry.total_credit) }}</strong></td>
+      </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

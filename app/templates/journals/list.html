@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Journals{% endblock %}
+{% block heading %}Journals{% endblock %}
+{% block content %}
+<div class="panel">
+  <div class="panel-header">
+    <h2>All Journals</h2>
+    <a class="btn primary" href="/journals/new">+ New Journal</a>
+  </div>
+  <div class="panel-body">
+    {% if journals %}
+    <table>
+      <thead><tr><th>Name</th><th>Type</th><th>Default Debit Account</th><th>Default Credit Account</th><th></th></tr></thead>
+      <tbody>
+      {% for j in journals %}
+        <tr>
+          <td>{{ j.name }}</td>
+          <td><span class="badge blue">{{ j.type.value|title }}</span></td>
+          <td>{{ j.default_debit_account.name if j.default_debit_account else '—' }}</td>
+          <td>{{ j.default_credit_account.name if j.default_credit_account else '—' }}</td>
+          <td>{% if user.role.value == 'admin' %}<a class="btn small" href="/journals/{{ j.id }}/edit">Edit</a>{% endif %}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+      <div class="empty-state"><div class="icon">📚</div>No journals yet.</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

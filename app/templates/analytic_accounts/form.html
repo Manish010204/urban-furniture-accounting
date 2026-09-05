@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}New Analytic Account{% endblock %}
+{% block heading %}New Analytic Account{% endblock %}
+{% block content %}
+<div class="panel">
+  <div class="panel-body" style="max-width:520px;">
+    {% if error %}<div class="flash error">{{ error }}</div>{% endif %}
+    <form method="post" action="/analytic-accounts/new">
+      <div class="field">
+        <label>Analytic Account Name *</label>
+        <input type="text" name="name" required>
+      </div>
+      <div class="field">
+        <label>Type *</label>
+        <select name="type" required>
+          <option value="income">Income</option>
+          <option value="expense">Expenses</option>
+        </select>
+      </div>
+      <div class="btn-row">
+        <button class="btn primary" type="submit">Create</button>
+        <a class="btn" href="/analytic-accounts">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

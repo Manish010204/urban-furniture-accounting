@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}{{ contact.name }}{% endblock %}
+{% block heading %}{{ contact.name }}{% endblock %}
+{% block content %}
+<div class="grid-2">
+  <div class="panel">
+    <div class="panel-header"><h2>Details</h2>
+      <div style="display:flex;gap:8px;">
+        {% if user.role.value == 'admin' %}
+        <a class="btn small" href="/contacts/{{ contact.id }}/edit">Edit</a>
+        <form method="post" action="/contacts/{{ contact.id }}/archive" style="display:inline;">
+          <button class="btn small {{ 'danger' if not contact.is_archived }}" type="submit">
+            {{ 'Unarchive' if contact.is_archived else 'Archive' }}
+          </button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+    <div class="panel-body">
+      <div class="kv"><span class="k">Type</span><span class="v">{{ contact.type.value|title }}</span></div>
+      <div class="kv"><span class="k">Email</span><span class="v">{{ contact.email or '—' }}</span></div>
+      <div class="kv"><span class="k">Mobile</span><span class="v">{{ contact.mobile or '—' }}</span></div>
+      <div class="kv"><span class="k">City</span><span class="v">{{ contact.city or '—' }}</span></div>
+      <div class="kv"><span class="k">State</span><span class="v">{{ contact.state or '—' }}</span></div>
+      <div class="kv"><span class="k">Pincode</span><span class="v">{{ contact.pincode or '—' }}</span></div>
+      <div class="kv"><span class="k">Status</span><span class="v">
+        {% if contact.is_archived %}<span class="badge red">Archived</span>{% else %}<span class="badge green">Active</span>{% endif %}
+      </span></div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-header"><h2>Quick Actions</h2></div>
+    <div class="panel-body">
+      <a class="btn" style="width:100%;justify-content:center;margin-bottom:8px;" href="/purchases/new?vendor_id={{ contact.id }}">New Purchase Order</a>
+      <a class="btn" style="width:100%;justify-content:center;" href="/sales/new?customer_id={{ contact.id }}">New Sales Order</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

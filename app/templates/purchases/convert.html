@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Convert PO-{{ po.id }} to Vendor Bill{% endblock %}
+{% block heading %}Convert to Vendor Bill{% endblock %}
+{% block content %}
+<div class="panel" style="max-width:520px;">
+  <div class="panel-body">
+    <p class="help-text">PO-{{ po.id }} — {{ po.vendor.name }} — Total ₹{{ "%.2f"|format(po.total) }}</p>
+    <form method="post" action="/purchases/{{ po.id }}/convert">
+      <div class="field">
+        <label>Invoice Date *</label>
+        <input type="date" name="invoice_date" required value="{{ invoice_date }}">
+      </div>
+      <div class="field">
+        <label>Due Date *</label>
+        <input type="date" name="due_date" required value="{{ due_date }}">
+      </div>
+      <div class="btn-row">
+        <button class="btn primary" type="submit">Create Vendor Bill</button>
+        <a class="btn" href="/purchases/{{ po.id }}">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

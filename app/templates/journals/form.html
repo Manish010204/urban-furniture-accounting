@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit' if journal else 'New' }} Journal{% endblock %}
+{% block heading %}{{ 'Edit Journal' if journal else 'New Journal' }}{% endblock %}
+{% block content %}
+<div class="panel">
+  <div class="panel-body" style="max-width:560px;">
+    {% if error %}<div class="flash error">{{ error }}</div>{% endif %}
+    <form method="post" action="{{ '/journals/%d/edit'|format(journal.id) if journal else '/journals/new' }}">
+      <div class="field">
+        <label>Journal Name *</label>
+        <input type="text" name="name" required value="{{ journal.name if journal else '' }}">
+      </div>
+      <div class="field">
+        <label>Type *</label>
+        <select name="type" required>
+          {% set current_type = journal.type.value if journal else '' %}
+          {% for t in ['sales', 'purchase', 'bank', 'cash'] %}
+          <option value="{{ t }}" {{ 'selected' if current_type==t }}>{{ t|title }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field">
+        <label>Default Debit Account</label>
+        <select name="default_debit_account_id">
+          <option value="">—</option>
+          {% for a in accounts %}
+          <option value="{{ a.id }}" {{ 'selected' if journal and journal.default_debit_account_id==a.id }}>{{ a.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field">
+        <label>Default Credit Account</label>
+        <select name="default_credit_account_id">
+          <option value="">—</option>
+          {% for a in accounts %}
+          <option value="{{ a.id }}" {{ 'selected' if journal and journal.default_credit_account_id==a.id }}>{{ a.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="btn-row">
+        <button class="btn primary" type="submit">{{ 'Save Changes' if journal else 'Create Journal' }}</button>
+        <a class="btn" href="/journals">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

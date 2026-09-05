@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit' if contact else 'New' }} Contact{% endblock %}
+{% block heading %}{{ 'Edit Contact' if contact else 'New Contact' }}{% endblock %}
+{% block content %}
+<div class="panel">
+  <div class="panel-body" style="max-width:640px;">
+    {% if error %}<div class="flash error">{{ error }}</div>{% endif %}
+    <form method="post" action="{{ '/contacts/%d/edit'|format(contact.id) if contact else '/contacts/new' }}">
+      <div class="form-grid">
+        <div class="field full">
+          <label>Name *</label>
+          <input type="text" name="name" required value="{{ contact.name if contact else (form.name if form is defined else '') }}">
+        </div>
+        <div class="field">
+          <label>Type *</label>
+          <select name="type" required>
+            {% set current_type = contact.type.value if contact else (form.type if form is defined else '') %}
+            <option value="customer" {{ 'selected' if current_type=='customer' }}>Customer</option>
+            <option value="vendor" {{ 'selected' if current_type=='vendor' }}>Vendor</option>
+            <option value="both" {{ 'selected' if current_type=='both' }}>Both</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Email</label>
+          <input type="email" name="email" value="{{ contact.email if contact else '' }}">
+        </div>
+        <div class="field">
+          <label>Mobile</label>
+          <input type="text" name="mobile" value="{{ contact.mobile if contact else '' }}">
+        </div>
+        <div class="field">
+          <label>City</label>
+          <input type="text" name="city" value="{{ contact.city if contact else '' }}">
+        </div>
+        <div class="field">
+          <label>State</label>
+          <input type="text" name="state" value="{{ contact.state if contact else '' }}">
+        </div>
+        <div class="field">
+          <label>Pincode</label>
+          <input type="text" name="pincode" value="{{ contact.pincode if contact else '' }}">
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn primary" type="submit">{{ 'Save Changes' if contact else 'Create Contact' }}</button>
+        <a class="btn" href="{{ '/contacts/%d'|format(contact.id) if contact else '/contacts' }}">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

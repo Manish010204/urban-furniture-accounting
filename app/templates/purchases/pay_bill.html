@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Pay BILL-{{ bill.id }}{% endblock %}
+{% block heading %}Register Vendor Payment{% endblock %}
+{% block content %}
+<div class="panel" style="max-width:480px;">
+  <div class="panel-body">
+    {% if error %}<div class="flash error">{{ error }}</div>{% endif %}
+    <p class="help-text">BILL-{{ bill.id }} — {{ bill.vendor.name }} — Amount Due ₹{{ "%.2f"|format(bill.amount_due) }}</p>
+    <form method="post" action="/purchases/bills/{{ bill.id }}/pay">
+      <div class="field">
+        <label>Amount *</label>
+        <input type="number" step="0.01" min="0.01" max="{{ bill.amount_due }}" name="amount" required value="{{ bill.amount_due }}">
+      </div>
+      <div class="field">
+        <label>Payment Method *</label>
+        <select name="method" required>
+          <option value="bank">Bank</option>
+          <option value="cash">Cash</option>
+        </select>
+      </div>
+      <div class="btn-row">
+        <button class="btn primary" type="submit">Register Payment</button>
+        <a class="btn" href="/purchases/bills/{{ bill.id }}">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

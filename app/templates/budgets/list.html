@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Budgets{% endblock %}
+{% block heading %}Budgets{% endblock %}
+{% block content %}
+<div class="panel">
+  <div class="panel-header">
+    <h2>All Budgets</h2>
+    <a class="btn primary" href="/budgets/new">+ New Budget</a>
+  </div>
+  <div class="panel-body">
+    {% if rows %}
+    <table>
+      <thead><tr><th>Budget</th><th>Period</th><th>Responsible</th><th>Analytic Account</th><th>Planned</th><th>Actual</th><th>Variance</th></tr></thead>
+      <tbody>
+      {% for r in rows %}
+        <tr>
+          <td><a href="/budgets/{{ r.budget.id }}">{{ r.budget.name }}</a></td>
+          <td>{{ r.budget.period_start }} → {{ r.budget.period_end }}</td>
+          <td>{{ r.budget.responsible_person }}</td>
+          <td><span class="badge blue">{{ r.budget.analytic_account.name }}</span></td>
+          <td class="num">₹{{ "%.2f"|format(r.budget.planned_amount) }}</td>
+          <td class="num">₹{{ "%.2f"|format(r.actual) }}</td>
+          <td class="num">
+            {% if r.variance >= 0 %}<span style="color:var(--success);">₹{{ "%.2f"|format(r.variance) }}</span>
+            {% else %}<span style="color:var(--danger);">₹{{ "%.2f"|format(r.variance) }}</span>{% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+      <div class="empty-state"><div class="icon">🎯</div>No budgets yet.</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

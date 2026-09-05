@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Urban Furniture Accounting{% endblock %}</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+{% if user %}
+<div class="app-shell">
+  <aside class="sidebar">
+    <div class="brand">Urban Furniture<small>Accounting System</small></div>
+    <nav>
+      {% if user.role.value in ['admin', 'accountant'] %}
+      <a class="nav-link {{ 'active' if active=='dashboard' }}" href="/">📊 Dashboard</a>
+      <div class="nav-section">Master Data</div>
+      <a class="nav-link {{ 'active' if active=='contacts' }}" href="/contacts">👤 Contacts</a>
+      <a class="nav-link {{ 'active' if active=='products' }}" href="/products">🪑 Products</a>
+      <a class="nav-link {{ 'active' if active=='accounts' }}" href="/accounts">📒 Chart of Accounts</a>
+      <a class="nav-link {{ 'active' if active=='journals' }}" href="/journals">📚 Journals</a>
+      <a class="nav-link {{ 'active' if active=='journal_entries' }}" href="/journal-entries">🧾 Journal Entries</a>
+      <a class="nav-link {{ 'active' if active=='analytic' }}" href="/analytic-accounts">🏷️ Analytic Accounts</a>
+      <a class="nav-link {{ 'active' if active=='budgets' }}" href="/budgets">🎯 Budgets</a>
+      <div class="nav-section">Transactions</div>
+      <a class="nav-link {{ 'active' if active=='sales' }}" href="/sales">🛒 Sales</a>
+      <a class="nav-link {{ 'active' if active=='purchases' }}" href="/purchases">📦 Purchases</a>
+      <a class="nav-link {{ 'active' if active=='payments' }}" href="/payments">💳 Payments</a>
+      <div class="nav-section">Reports</div>
+      <a class="nav-link {{ 'active' if active=='reports' }}" href="/reports">📈 Reports</a>
+      {% else %}
+      <a class="nav-link {{ 'active' if active=='my_invoices' }}" href="/">🧾 My Invoices &amp; Bills</a>
+      {% endif %}
+    </nav>
+  </aside>
+  <div class="main">
+    <div class="topbar">
+      <h1>{% block heading %}{% endblock %}</h1>
+      <div class="user-chip">
+        <div class="avatar">{{ user.name[0] }}</div>
+        <div>{{ user.name }}<br><span class="role-badge">{{ user.role.value }}</span></div>
+        <a class="btn small" href="/logout">Switch User</a>
+      </div>
+    </div>
+    <div class="content">
+      {% if request.query_params.get('error') %}
+        <div class="flash error">{{ request.query_params.get('error') }}</div>
+      {% endif %}
+      {% if request.query_params.get('success') %}
+        <div class="flash success">{{ request.query_params.get('success') }}</div>
+      {% endif %}
+      {% block content %}{% endblock %}
+    </div>
+  </div>
+</div>
+{% else %}
+  {% block guest_content %}{% endblock %}
+{% endif %}
+</body>
+</html>

@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Payments{% endblock %}
+{% block heading %}Payments{% endblock %}
+{% block content %}
+<div class="panel">
+  <div class="panel-header"><h2>All Payments</h2></div>
+  <div class="panel-body">
+    {% if payments %}
+    <table>
+      <thead><tr><th>#</th><th>Direction</th><th>Party</th><th>Method</th><th>Date</th><th>Amount</th><th>Against</th></tr></thead>
+      <tbody>
+      {% for p in payments %}
+        <tr>
+          <td>PMT-{{ p.id }}</td>
+          <td>{% if p.direction.value == 'inbound' %}<span class="badge green">Received</span>{% else %}<span class="badge amber">Paid</span>{% endif %}</td>
+          <td>{{ p.party.name }}</td>
+          <td>{{ p.method.value|title }}</td>
+          <td>{{ p.date }}</td>
+          <td class="num">₹{{ "%.2f"|format(p.amount) }}</td>
+          <td>
+            {% if p.vendor_bill_id %}<a href="/purchases/bills/{{ p.vendor_bill_id }}">BILL-{{ p.vendor_bill_id }}</a>{% endif %}
+            {% if p.customer_invoice_id %}<a href="/sales/invoices/{{ p.customer_invoice_id }}">INV-{{ p.customer_invoice_id }}</a>{% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+      <div class="empty-state"><div class="icon">💳</div>No payments recorded yet.</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

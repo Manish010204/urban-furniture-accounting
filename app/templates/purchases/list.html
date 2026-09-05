@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Purchases{% endblock %}
+{% block heading %}Purchases{% endblock %}
+{% block content %}
+<div class="panel">
+  <div class="panel-header">
+    <h2>Purchase Orders</h2>
+    <a class="btn primary" href="/purchases/new">+ New Purchase Order</a>
+  </div>
+  <div class="panel-body">
+    {% if orders %}
+    <table>
+      <thead><tr><th>#</th><th>Vendor</th><th>Date</th><th>Total</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+      {% for po in orders %}
+        <tr>
+          <td><a href="/purchases/{{ po.id }}">PO-{{ po.id }}</a></td>
+          <td>{{ po.vendor.name }}</td>
+          <td>{{ po.date }}</td>
+          <td class="num">₹{{ "%.2f"|format(po.total) }}</td>
+          <td>{% if po.status.value == 'billed' %}<span class="badge green">Billed</span>{% else %}<span class="badge gray">Draft</span>{% endif %}</td>
+          <td><a class="btn small" href="/purchases/{{ po.id }}">View</a></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+      <div class="empty-state"><div class="icon">📦</div>No purchase orders yet. Create one to get started.</div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="panel">
+  <div class="panel-header"><h2>Vendor Bills</h2></div>
+  <div class="panel-body">
+    {% if bills %}
+    <table>
+      <thead><tr><th>#</th><th>Vendor</th><th>Invoice Date</th><th>Due Date</th><th>Total</th><th>Due</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+      {% for bill in bills %}
+        <tr>
+          <td><a href="/purchases/bills/{{ bill.id }}">BILL-{{ bill.id }}</a></td>
+          <td>{{ bill.vendor.name }}</td>
+          <td>{{ bill.invoice_date }}</td>
+          <td>{{ bill.due_date }}</td>
+          <td class="num">₹{{ "%.2f"|format(bill.total) }}</td>
+          <td class="num">₹{{ "%.2f"|format(bill.amount_due) }}</td>
+          <td>
+            {% if bill.status.value == 'paid' %}<span class="badge green">Paid</span>
+            {% elif bill.status.value == 'partially_paid' %}<span class="badge amber">Partially Paid</span>
+            {% else %}<span class="badge gray">Unpaid</span>{% endif %}
+          </td>
+          <td>
+            {% if bill.status.value != 'paid' %}<a class="btn small primary" href="/purchases/bills/{{ bill.id }}/pay">Pay</a>{% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+      <div class="empty-state"><div class="icon">🧾</div>No vendor bills yet.</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

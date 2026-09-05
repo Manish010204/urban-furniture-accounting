@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}My Invoices & Bills{% endblock %}
+{% block heading %}My Invoices &amp; Bills{% endblock %}
+{% block content %}
+<div class="panel">
+  <div class="panel-header"><h2>My Invoices</h2></div>
+  <div class="panel-body">
+    {% if invoices %}
+    <table>
+      <thead><tr><th>#</th><th>Date</th><th>Total</th><th>Amount Due</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+      {% for inv in invoices %}
+        <tr>
+          <td>INV-{{ inv.id }}</td>
+          <td>{{ inv.invoice_date }}</td>
+          <td class="num">₹{{ "%.2f"|format(inv.total) }}</td>
+          <td class="num">₹{{ "%.2f"|format(inv.amount_due) }}</td>
+          <td>
+            {% set status = inv.status.value %}
+            {% if status == 'paid' %}<span class="badge green">Paid</span>
+            {% elif status == 'partially_paid' %}<span class="badge amber">Partially Paid</span>
+            {% else %}<span class="badge gray">Unpaid</span>{% endif %}
+          </td>
+          <td>
+            {% if inv.status.value != 'paid' %}
+            <a class="btn small primary" href="/sales/invoices/{{ inv.id }}/pay">Make Payment</a>
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+      <div class="empty-state"><div class="icon">🧾</div>No invoices found for your account.</div>
+    {% endif %}
+  </div>
+</div>
+<div class="panel">
+  <div class="panel-header"><h2>My Bills</h2></div>
+  <div class="panel-body">
+    {% if bills %}
+    <table>
+      <thead><tr><th>#</th><th>Due Date</th><th>Total</th><th>Amount Due</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+      {% for bill in bills %}
+        <tr>
+          <td>BILL-{{ bill.id }}</td>
+          <td>{{ bill.due_date }}</td>
+          <td class="num">₹{{ "%.2f"|format(bill.total) }}</td>
+          <td class="num">₹{{ "%.2f"|format(bill.amount_due) }}</td>
+          <td>
+            {% set status = bill.status.value %}
+            {% if status == 'paid' %}<span class="badge green">Paid</span>
+            {% elif status == 'partially_paid' %}<span class="badge amber">Partially Paid</span>
+            {% else %}<span class="badge gray">Unpaid</span>{% endif %}
+          </td>
+          <td>
+            {% if bill.status.value != 'paid' %}
+            <a class="btn small primary" href="/purchases/bills/{{ bill.id }}/pay">Make Payment</a>
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+      <div class="empty-state"><div class="icon">📦</div>No bills found for your account.</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

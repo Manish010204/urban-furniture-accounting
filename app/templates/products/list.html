@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Products{% endblock %}
+{% block heading %}Products{% endblock %}
+{% block content %}
+<div class="panel">
+  <div class="panel-header">
+    <h2>All Products</h2>
+    <a class="btn primary" href="/products/new">+ New Product</a>
+  </div>
+  <div class="panel-body">
+    <div class="toolbar">
+      <form method="get" action="/products">
+        <input type="text" name="q" value="{{ q }}" placeholder="Search by name...">
+        <select name="type">
+          <option value="">All types</option>
+          <option value="goods" {{ 'selected' if type=='goods' }}>Goods</option>
+          <option value="service" {{ 'selected' if type=='service' }}>Service</option>
+          <option value="combo" {{ 'selected' if type=='combo' }}>Combo</option>
+        </select>
+        <label style="display:flex;align-items:center;gap:6px;font-weight:400;">
+          <input type="checkbox" name="show_archived" value="true" style="width:auto;" {{ 'checked' if show_archived }}> Show archived
+        </label>
+        <button class="btn small" type="submit">Filter</button>
+      </form>
+    </div>
+    {% if products %}
+    <table>
+      <thead><tr><th>Name</th><th>Type</th><th>Category</th><th>Sales Price</th><th>Cost Price</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+      {% for p in products %}
+        <tr>
+          <td><a href="/products/{{ p.id }}">{{ p.name }}</a></td>
+          <td><span class="badge blue">{{ p.type.value|title }}</span></td>
+          <td>{{ p.category or '—' }}</td>
+          <td class="num">₹{{ "%.2f"|format(p.sales_price) }}</td>
+          <td class="num">₹{{ "%.2f"|format(p.cost_price) }}</td>
+          <td>{% if p.is_archived %}<span class="badge red">Archived</span>{% else %}<span class="badge green">Active</span>{% endif %}</td>
+          <td><a class="btn small" href="/products/{{ p.id }}">View</a></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+      <div class="empty-state"><div class="icon">🪑</div>No products match your filters.</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

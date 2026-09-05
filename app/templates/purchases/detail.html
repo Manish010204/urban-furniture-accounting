@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}PO-{{ po.id }}{% endblock %}
+{% block heading %}Purchase Order PO-{{ po.id }}{% endblock %}
+{% block content %}
+<div class="grid-2">
+  <div class="panel">
+    <div class="panel-header">
+      <h2>{{ po.vendor.name }}</h2>
+      {% if po.status.value == 'billed' %}<span class="badge green">Billed</span>{% else %}<span class="badge gray">Draft</span>{% endif %}
+    </div>
+    <div class="panel-body">
+      <div class="kv"><span class="k">Date</span><span class="v">{{ po.date }}</span></div>
+      {% if po.analytic_account %}<div class="kv"><span class="k">Analytic Account</span><span class="v">{{ po.analytic_account.name }}</span></div>{% endif %}
+      <table style="margin-top:14px;">
+        <thead><tr><th>Product</th><th>Qty</th><th>Unit Price</th><th>Total</th></tr></thead>
+        <tbody>
+        {% for line in po.lines %}
+          <tr>
+            <td>{{ line.product.name }}</td>
+            <td class="num">{{ line.qty }}</td>
+            <td class="num">₹{{ "%.2f"|format(line.unit_price) }}</td>
+            <td class="num">₹{{ "%.2f"|format(line.total) }}</td>
+          </tr>
+        {% endfor %}
+        <tr><td colspan="3"><strong>Total</strong></td><td class="num"><strong>₹{{ "%.2f"|format(po.total) }}</strong></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-header"><h2>Next Step</h2></div>
+    <div class="panel-body">
+      {% if po.bill %}
+        <p>This order has already been converted to a vendor bill.</p>
+        <a class="btn primary" style="width:100%;justify-content:center;" href="/purchases/bills/{{ po.bill.id }}">View Vendor Bill</a>
+      {% else %}
+        <p class="help-text">Convert this purchase order into a vendor bill once goods/invoice are received.</p>
+        <a class="btn primary" style="width:100%;justify-content:center;" href="/purchases/{{ po.id }}/convert">Convert to Vendor Bill</a>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

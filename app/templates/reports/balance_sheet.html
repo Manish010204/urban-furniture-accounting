@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Balance Sheet{% endblock %}
+{% block heading %}Balance Sheet{% endblock %}
+{% block content %}
+<div class="toolbar">
+  <form method="get" action="/reports/balance-sheet">
+    <label style="font-weight:400;">As of</label>
+    <input type="date" name="as_of" value="{{ as_of }}">
+    <button class="btn small" type="submit">Update</button>
+  </form>
+</div>
+<div class="grid-2">
+  <div class="panel">
+    <div class="panel-header"><h2>Assets</h2></div>
+    <div class="panel-body">
+      {% for row in data.assets %}
+      <div class="kv"><span class="k">{{ row.account.name }}</span><span class="v">₹{{ "%.2f"|format(row.balance) }}</span></div>
+      {% endfor %}
+      <div class="kv" style="border-top:2px solid var(--border);margin-top:6px;"><span class="k"><strong>Total Assets</strong></span><span class="v"><strong>₹{{ "%.2f"|format(data.total_assets) }}</strong></span></div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-header"><h2>Liabilities &amp; Capital</h2></div>
+    <div class="panel-body">
+      <p class="help-text" style="margin-top:0;">Liabilities</p>
+      {% for row in data.liabilities %}
+      <div class="kv"><span class="k">{{ row.account.name }}</span><span class="v">₹{{ "%.2f"|format(row.balance) }}</span></div>
+      {% endfor %}
+      <div class="kv"><span class="k"><strong>Total Liabilities</strong></span><span class="v"><strong>₹{{ "%.2f"|format(data.total_liabilities) }}</strong></span></div>
+      <p class="help-text" style="margin-top:14px;">Capital</p>
+      {% for row in data.capital %}
+      <div class="kv"><span class="k">{{ row.account.name }}</span><span class="v">₹{{ "%.2f"|format(row.balance) }}</span></div>
+      {% endfor %}
+      <div class="kv"><span class="k">Retained Earnings (Net Profit)</span><span class="v">₹{{ "%.2f"|format(data.retained_earnings) }}</span></div>
+      <div class="kv"><span class="k"><strong>Total Capital</strong></span><span class="v"><strong>₹{{ "%.2f"|format(data.total_capital) }}</strong></span></div>
+      <div class="kv" style="border-top:2px solid var(--border);margin-top:6px;"><span class="k"><strong>Total Liabilities + Capital</strong></span><span class="v"><strong>₹{{ "%.2f"|format(data.total_liabilities_and_capital) }}</strong></span></div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Reports{% endblock %}
+{% block heading %}Reports{% endblock %}
+{% block content %}
+<div class="cards-row">
+  <a class="panel" style="padding:20px;display:block;" href="/reports/balance-sheet">
+    <h2 style="margin:0 0 6px;">📄 Balance Sheet</h2>
+    <p class="help-text" style="margin:0;">Assets, Liabilities &amp; Capital as of a chosen date.</p>
+  </a>
+  <a class="panel" style="padding:20px;display:block;" href="/reports/profit-loss">
+    <h2 style="margin:0 0 6px;">📈 Profit &amp; Loss</h2>
+    <p class="help-text" style="margin:0;">Income, expenses and net profit for a period.</p>
+  </a>
+  <a class="panel" style="padding:20px;display:block;" href="/reports/budget">
+    <h2 style="margin:0 0 6px;">🎯 Budget Report</h2>
+    <p class="help-text" style="margin:0;">Planned vs actual spend/income by analytic account.</p>
+  </a>
+</div>
+{% endblock %}

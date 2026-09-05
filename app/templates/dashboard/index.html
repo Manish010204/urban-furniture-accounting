@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Urban Furniture Accounting{% endblock %}
+{% block heading %}Dashboard{% endblock %}
+{% block content %}
+<div class="cards-row">
+  <div class="stat-card">
+    <div class="label">Total Sales</div>
+    <div class="value">₹{{ "%.2f"|format(total_sales) }}</div>
+    <div class="sub">Sales income to date</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Total Purchases</div>
+    <div class="value">₹{{ "%.2f"|format(total_purchases) }}</div>
+    <div class="sub">Purchases expense to date</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Receivables</div>
+    <div class="value">₹{{ "%.2f"|format(receivables) }}</div>
+    <div class="sub">Owed by customers (Debtors)</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Payables</div>
+    <div class="value">₹{{ "%.2f"|format(payables) }}</div>
+    <div class="sub">Owed to vendors (Creditors)</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Cash</div>
+    <div class="value">₹{{ "%.2f"|format(cash) }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Bank</div>
+    <div class="value">₹{{ "%.2f"|format(bank) }}</div>
+  </div>
+  <div class="stat-card {{ 'accent-good' if net_profit >= 0 else 'accent-bad' }}">
+    <div class="label">Net Profit</div>
+    <div class="value">₹{{ "%.2f"|format(net_profit) }}</div>
+    <div class="sub">Income − Expenses</div>
+  </div>
+</div>
+
+<div class="grid-2">
+  <div class="panel">
+    <div class="panel-header"><h2>Recent Customer Invoices</h2><a class="btn small" href="/sales">View all</a></div>
+    <div class="panel-body">
+      {% if recent_invoices %}
+      <table>
+        <thead><tr><th>#</th><th>Customer</th><th>Date</th><th>Total</th><th>Status</th></tr></thead>
+        <tbody>
+        {% for inv in recent_invoices %}
+          <tr>
+            <td><a href="/sales/invoices/{{ inv.id }}">INV-{{ inv.id }}</a></td>
+            <td>{{ inv.customer.name }}</td>
+            <td>{{ inv.invoice_date }}</td>
+            <td class="num">₹{{ "%.2f"|format(inv.total) }}</td>
+            <td>
+              {% set status = inv.status.value %}
+              {% if status == 'paid' %}<span class="badge green">Paid</span>
+              {% elif status == 'partially_paid' %}<span class="badge amber">Partially Paid</span>
+              {% else %}<span class="badge gray">Unpaid</span>{% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+        <div class="empty-state"><div class="icon">🧾</div>No invoices yet.</div>
+      {% endif %}
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-header"><h2>Recent Vendor Bills</h2><a class="btn small" href="/purchases">View all</a></div>
+    <div class="panel-body">
+      {% if recent_bills %}
+      <table>
+        <thead><tr><th>#</th><th>Vendor</th><th>Due</th><th>Total</th><th>Status</th></tr></thead>
+        <tbody>
+        {% for bill in recent_bills %}
+          <tr>
+            <td><a href="/purchases/bills/{{ bill.id }}">BILL-{{ bill.id }}</a></td>
+            <td>{{ bill.vendor.name }}</td>
+            <td>{{ bill.due_date }}</td>
+            <td class="num">₹{{ "%.2f"|format(bill.total) }}</td>
+            <td>
+              {% set status = bill.status.value %}
+              {% if status == 'paid' %}<span class="badge green">Paid</span>
+              {% elif status == 'partially_paid' %}<span class="badge amber">Partially Paid</span>
+              {% else %}<span class="badge gray">Unpaid</span>{% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+        <div class="empty-state"><div class="icon">📦</div>No bills yet.</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

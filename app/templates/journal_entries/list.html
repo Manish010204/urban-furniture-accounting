@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Journal Entries{% endblock %}
+{% block heading %}Journal Entries{% endblock %}
+{% block content %}
+<div class="panel">
+  <div class="panel-header">
+    <h2>All Journal Entries</h2>
+    <a class="btn primary" href="/journal-entries/new">+ New Manual Entry</a>
+  </div>
+  <div class="panel-body">
+    {% if entries %}
+    <table>
+      <thead><tr><th>#</th><th>Journal</th><th>Date</th><th>Reference</th><th>Debit</th><th>Credit</th><th>Balanced</th></tr></thead>
+      <tbody>
+      {% for e in entries %}
+        <tr>
+          <td><a href="/journal-entries/{{ e.id }}">JE-{{ e.id }}</a></td>
+          <td>{{ e.journal.name }}</td>
+          <td>{{ e.date }}</td>
+          <td>{{ e.reference or '—' }}</td>
+          <td class="num">₹{{ "%.2f"|format(e.total_debit) }}</td>
+          <td class="num">₹{{ "%.2f"|format(e.total_credit) }}</td>
+          <td>{% if e.total_debit == e.total_credit %}<span class="badge green">Balanced</span>{% else %}<span class="badge red">Unbalanced</span>{% endif %}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+      <div class="empty-state"><div class="icon">🧾</div>No journal entries posted yet.</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

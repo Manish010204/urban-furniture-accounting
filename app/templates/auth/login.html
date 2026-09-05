@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Login — Urban Furniture Accounting{% endblock %}
+{% block guest_content %}
+<div class="login-wrap">
+  <div class="login-card">
+    <h1 style="margin-top:0;font-size:20px;">Urban Furniture Accounting</h1>
+    <p class="help-text" style="margin-bottom:18px;">Prototype demo login — pick a user to sign in as. No password required.</p>
+    {% for u in users %}
+    <form method="post" action="/login/{{ u.id }}">
+      <div class="role-option">
+        <div>
+          <div class="name">{{ u.name }}</div>
+          <div class="role">{{ u.role.value|title }}{% if u.contact %} · {{ u.contact.name }}{% endif %}</div>
+        </div>
+        <button class="btn primary small" type="submit">Sign in</button>
+      </div>
+    </form>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

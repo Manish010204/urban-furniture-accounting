@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}{{ budget.name }}{% endblock %}
+{% block heading %}{{ budget.name }}{% endblock %}
+{% block content %}
+<div class="panel" style="max-width:560px;">
+  <div class="panel-header"><h2>Budget Details</h2></div>
+  <div class="panel-body">
+    <div class="kv"><span class="k">Period</span><span class="v">{{ budget.period_start }} → {{ budget.period_end }}</span></div>
+    <div class="kv"><span class="k">Responsible Person</span><span class="v">{{ budget.responsible_person }}</span></div>
+    <div class="kv"><span class="k">Analytic Account</span><span class="v">{{ budget.analytic_account.name }}</span></div>
+    <div class="kv"><span class="k">Planned Amount</span><span class="v">₹{{ "%.2f"|format(budget.planned_amount) }}</span></div>
+    {% if row %}
+    <div class="kv"><span class="k">Actual Amount</span><span class="v">₹{{ "%.2f"|format(row.actual) }}</span></div>
+    <div class="kv"><span class="k">Variance</span><span class="v">₹{{ "%.2f"|format(row.variance) }}</span></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Sales{% endblock %}
+{% block heading %}Sales{% endblock %}
+{% block content %}
+<div class="panel">
+  <div class="panel-header">
+    <h2>Sales Orders</h2>
+    <a class="btn primary" href="/sales/new">+ New Sales Order</a>
+  </div>
+  <div class="panel-body">
+    {% if orders %}
+    <table>
+      <thead><tr><th>#</th><th>Customer</th><th>Date</th><th>Total</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+      {% for so in orders %}
+        <tr>
+          <td><a href="/sales/{{ so.id }}">SO-{{ so.id }}</a></td>
+          <td>{{ so.customer.name }}</td>
+          <td>{{ so.date }}</td>
+          <td class="num">₹{{ "%.2f"|format(so.total) }}</td>
+          <td>{% if so.status.value == 'invoiced' %}<span class="badge green">Invoiced</span>{% else %}<span class="badge gray">Draft</span>{% endif %}</td>
+          <td><a class="btn small" href="/sales/{{ so.id }}">View</a></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+      <div class="empty-state"><div class="icon">🛒</div>No sales orders yet. Create one to get started.</div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="panel">
+  <div class="panel-header"><h2>Customer Invoices</h2></div>
+  <div class="panel-body">
+    {% if invoices %}
+    <table>
+      <thead><tr><th>#</th><th>Customer</th><th>Invoice Date</th><th>Due Date</th><th>Total</th><th>Due</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+      {% for inv in invoices %}
+        <tr>
+          <td><a href="/sales/invoices/{{ inv.id }}">INV-{{ inv.id }}</a></td>
+          <td>{{ inv.customer.name }}</td>
+          <td>{{ inv.invoice_date }}</td>
+          <td>{{ inv.due_date }}</td>
+          <td class="num">₹{{ "%.2f"|format(inv.total) }}</td>
+          <td class="num">₹{{ "%.2f"|format(inv.amount_due) }}</td>
+          <td>
+            {% if inv.status.value == 'paid' %}<span class="badge green">Paid</span>
+            {% elif inv.status.value == 'partially_paid' %}<span class="badge amber">Partially Paid</span>
+            {% else %}<span class="badge gray">Unpaid</span>{% endif %}
+          </td>
+          <td>
+            {% if inv.status.value != 'paid' %}<a class="btn small primary" href="/sales/invoices/{{ inv.id }}/pay">Receive Payment</a>{% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+      <div class="empty-state"><div class="icon">🧾</div>No customer invoices yet.</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

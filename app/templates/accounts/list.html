@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Chart of Accounts{% endblock %}
+{% block heading %}Chart of Accounts{% endblock %}
+{% block content %}
+<div class="panel">
+  <div class="panel-header">
+    <h2>Ledger Accounts</h2>
+    <a class="btn primary" href="/accounts/new">+ New Account</a>
+  </div>
+  <div class="panel-body">
+    {% if accounts %}
+    <table>
+      <thead><tr><th>Code</th><th>Name</th><th>Type</th><th>Current Balance</th><th></th></tr></thead>
+      <tbody>
+      {% for a in accounts %}
+        <tr>
+          <td>{{ a.code or '—' }}</td>
+          <td>{{ a.name }}</td>
+          <td><span class="badge blue">{{ a.type.value|title }}</span></td>
+          <td class="num">₹{{ "%.2f"|format(balances[a.id]) }}</td>
+          <td>{% if user.role.value == 'admin' %}<a class="btn small" href="/accounts/{{ a.id }}/edit">Edit</a>{% endif %}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+      <div class="empty-state"><div class="icon">📒</div>No accounts yet.</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,19 @@
+{% macro badge(text, color='gray') -%}
+<span class="badge {{ color }}">{{ text }}</span>
+{%- endmacro %}
+
+{% macro status_badge(status) -%}
+{% set s = status.value if status is not string else status %}
+{% if s in ['paid', 'billed', 'invoiced'] %}{{ badge(s.replace('_',' ')|title, 'green') }}
+{% elif s in ['partially_paid'] %}{{ badge('Partially Paid', 'amber') }}
+{% elif s in ['unpaid', 'draft'] %}{{ badge(s|title, 'gray') }}
+{% else %}{{ badge(s|title, 'blue') }}
+{% endif %}
+{%- endmacro %}
+
+{% macro empty_state(message, icon='📄') -%}
+<div class="empty-state">
+  <div class="icon">{{ icon }}</div>
+  <div>{{ message }}</div>
+</div>
+{%- endmacro %}

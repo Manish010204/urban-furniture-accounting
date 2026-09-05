@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}{{ product.name }}{% endblock %}
+{% block heading %}{{ product.name }}{% endblock %}
+{% block content %}
+<div class="panel" style="max-width:640px;">
+  <div class="panel-header"><h2>Details</h2>
+    <div style="display:flex;gap:8px;">
+      {% if user.role.value == 'admin' %}
+      <a class="btn small" href="/products/{{ product.id }}/edit">Edit</a>
+      <form method="post" action="/products/{{ product.id }}/archive" style="display:inline;">
+        <button class="btn small {{ 'danger' if not product.is_archived }}" type="submit">
+          {{ 'Unarchive' if product.is_archived else 'Archive' }}
+        </button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+  <div class="panel-body">
+    <div class="kv"><span class="k">Type</span><span class="v">{{ product.type.value|title }}</span></div>
+    <div class="kv"><span class="k">Category</span><span class="v">{{ product.category or '—' }}</span></div>
+    <div class="kv"><span class="k">Sales Price</span><span class="v">₹{{ "%.2f"|format(product.sales_price) }}</span></div>
+    <div class="kv"><span class="k">Cost Price</span><span class="v">₹{{ "%.2f"|format(product.cost_price) }}</span></div>
+    <div class="kv"><span class="k">Status</span><span class="v">
+      {% if product.is_archived %}<span class="badge red">Archived</span>{% else %}<span class="badge green">Active</span>{% endif %}
+    </span></div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Analytic Accounts{% endblock %}
+{% block heading %}Analytic Accounts{% endblock %}
+{% block content %}
+<div class="panel">
+  <div class="panel-header">
+    <h2>All Analytic Accounts</h2>
+    <a class="btn primary" href="/analytic-accounts/new">+ New Analytic Account</a>
+  </div>
+  <div class="panel-body">
+    {% if items %}
+    <table>
+      <thead><tr><th>Name</th><th>Type</th></tr></thead>
+      <tbody>
+      {% for a in items %}
+        <tr><td>{{ a.name }}</td><td><span class="badge blue">{{ a.type.value|title }}</span></td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+      <div class="empty-state"><div class="icon">🏷️</div>No analytic accounts yet.</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

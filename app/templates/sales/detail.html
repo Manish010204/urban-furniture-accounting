@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}SO-{{ so.id }}{% endblock %}
+{% block heading %}Sales Order SO-{{ so.id }}{% endblock %}
+{% block content %}
+<div class="grid-2">
+  <div class="panel">
+    <div class="panel-header">
+      <h2>{{ so.customer.name }}</h2>
+      {% if so.status.value == 'invoiced' %}<span class="badge green">Invoiced</span>{% else %}<span class="badge gray">Draft</span>{% endif %}
+    </div>
+    <div class="panel-body">
+      <div class="kv"><span class="k">Date</span><span class="v">{{ so.date }}</span></div>
+      {% if so.analytic_account %}<div class="kv"><span class="k">Analytic Account</span><span class="v">{{ so.analytic_account.name }}</span></div>{% endif %}
+      <table style="margin-top:14px;">
+        <thead><tr><th>Product</th><th>Qty</th><th>Unit Price</th><th>Tax %</th><th>Total</th></tr></thead>
+        <tbody>
+        {% for line in so.lines %}
+          <tr>
+            <td>{{ line.product.name }}</td>
+            <td class="num">{{ line.qty }}</td>
+            <td class="num">₹{{ "%.2f"|format(line.unit_price) }}</td>
+            <td class="num">{{ line.tax_percent }}%</td>
+            <td class="num">₹{{ "%.2f"|format(line.total) }}</td>
+          </tr>
+        {% endfor %}
+        <tr><td colspan="4">Subtotal</td><td class="num">₹{{ "%.2f"|format(so.subtotal) }}</td></tr>
+        <tr><td colspan="4">Tax</td><td class="num">₹{{ "%.2f"|format(so.tax_amount) }}</td></tr>
+        <tr><td colspan="4"><strong>Grand Total</strong></td><td class="num"><strong>₹{{ "%.2f"|format(so.total) }}</strong></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-header"><h2>Next Step</h2></div>
+    <div class="panel-body">
+      {% if so.invoice %}
+        <p>This order has already been invoiced.</p>
+        <a class="btn primary" style="width:100%;justify-content:center;" href="/sales/invoices/{{ so.invoice.id }}">View Customer Invoice</a>
+      {% else %}
+        <p class="help-text">Generate a customer invoice for this sales order.</p>
+        <a class="btn primary" style="width:100%;justify-content:center;" href="/sales/{{ so.id }}/generate-invoice">Generate Customer Invoice</a>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

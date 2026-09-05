@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}BILL-{{ bill.id }}{% endblock %}
+{% block heading %}Vendor Bill BILL-{{ bill.id }}{% endblock %}
+{% block content %}
+<div class="grid-2">
+  <div class="panel">
+    <div class="panel-header">
+      <h2>{{ bill.vendor.name }}</h2>
+      {% if bill.status.value == 'paid' %}<span class="badge green">Paid</span>
+      {% elif bill.status.value == 'partially_paid' %}<span class="badge amber">Partially Paid</span>
+      {% else %}<span class="badge gray">Unpaid</span>{% endif %}
+    </div>
+    <div class="panel-body">
+      <div class="kv"><span class="k">Purchase Order</span><span class="v"><a href="/purchases/{{ bill.purchase_order_id }}">PO-{{ bill.purchase_order_id }}</a></span></div>
+      <div class="kv"><span class="k">Invoice Date</span><span class="v">{{ bill.invoice_date }}</span></div>
+      <div class="kv"><span class="k">Due Date</span><span class="v">{{ bill.due_date }}</span></div>
+      <div class="kv"><span class="k">Total</span><span class="v">₹{{ "%.2f"|format(bill.total) }}</span></div>
+      <div class="kv"><span class="k">Amount Paid</span><span class="v">₹{{ "%.2f"|format(bill.amount_paid) }}</span></div>
+      <div class="kv"><span class="k">Amount Due</span><span class="v">₹{{ "%.2f"|format(bill.amount_due) }}</span></div>
+      {% if bill.journal_entry %}<div class="kv"><span class="k">Journal Entry</span><span class="v"><a href="/journal-entries/{{ bill.journal_entry_id }}">JE-{{ bill.journal_entry_id }}</a></span></div>{% endif %}
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-header"><h2>Payments</h2></div>
+    <div class="panel-body">
+      {% if bill.payments %}
+        {% for p in bill.payments %}
+        <div class="kv"><span class="k">{{ p.date }} · {{ p.method.value|title }}</span><span class="v">₹{{ "%.2f"|format(p.amount) }}</span></div>
+        {% endfor %}
+      {% else %}
+        <p class="help-text">No payments recorded yet.</p>
+      {% endif %}
+      {% if bill.status.value != 'paid' %}
+      <a class="btn primary" style="width:100%;justify-content:center;margin-top:12px;" href="/purchases/bills/{{ bill.id }}/pay">Register Payment</a>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

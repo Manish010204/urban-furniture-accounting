@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit' if product else 'New' }} Product{% endblock %}
+{% block heading %}{{ 'Edit Product' if product else 'New Product' }}{% endblock %}
+{% block content %}
+<div class="panel">
+  <div class="panel-body" style="max-width:640px;">
+    {% if error %}<div class="flash error">{{ error }}</div>{% endif %}
+    <form method="post" action="{{ '/products/%d/edit'|format(product.id) if product else '/products/new' }}">
+      <div class="form-grid">
+        <div class="field full">
+          <label>Product Name *</label>
+          <input type="text" name="name" required value="{{ product.name if product else '' }}">
+        </div>
+        <div class="field">
+          <label>Type *</label>
+          <select name="type" required>
+            {% set current_type = product.type.value if product else '' %}
+            <option value="goods" {{ 'selected' if current_type=='goods' }}>Goods</option>
+            <option value="service" {{ 'selected' if current_type=='service' }}>Service</option>
+            <option value="combo" {{ 'selected' if current_type=='combo' }}>Combo</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Category</label>
+          <input type="text" name="category" value="{{ product.category if product else '' }}">
+        </div>
+        <div class="field">
+          <label>Sales Price *</label>
+          <input type="number" step="0.01" min="0" name="sales_price" required value="{{ product.sales_price if product else '' }}">
+        </div>
+        <div class="field">
+          <label>Cost / Purchase Price *</label>
+          <input type="number" step="0.01" min="0" name="cost_price" required value="{{ product.cost_price if product else '' }}">
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn primary" type="submit">{{ 'Save Changes' if product else 'Create Product' }}</button>
+        <a class="btn" href="{{ '/products/%d'|format(product.id) if product else '/products' }}">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
