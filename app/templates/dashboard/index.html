@@ -1,40 +1,172 @@
 {% extends "base.html" %}
-{% block title %}Dashboard — Urban Furniture Accounting{% endblock %}
-{% block heading %}Dashboard{% endblock %}
+{% block title %}Business Command Center — Urban Furniture{% endblock %}
+{% block heading %}{% endblock %}
 {% block content %}
-<div class="cards-row">
-  <div class="stat-card">
-    <div class="label">Total Sales</div>
-    <div class="value">₹{{ "%.2f"|format(total_sales) }}</div>
-    <div class="sub">Sales income to date</div>
+<div class="cc-header">
+  <div>
+    <div class="cc-greeting">{{ greeting }}, {{ user.name.split(' ')[0] }}</div>
+    <div class="cc-subtitle">Urban Furniture — {{ 'Business Command Center' if user.role.value == 'admin' else 'Operations Dashboard' }}</div>
   </div>
-  <div class="stat-card">
-    <div class="label">Total Purchases</div>
-    <div class="value">₹{{ "%.2f"|format(total_purchases) }}</div>
-    <div class="sub">Purchases expense to date</div>
+  <div class="cc-header-right">
+    <div class="cc-period">{{ trend[-1].label if trend else '' }}</div>
+    <a class="btn small" href="#new-transaction" onclick="document.getElementById('qa-panel').classList.toggle('open');return false;">+ New Transaction</a>
   </div>
-  <div class="stat-card">
-    <div class="label">Receivables</div>
-    <div class="value">₹{{ "%.2f"|format(receivables) }}</div>
-    <div class="sub">Owed by customers (Debtors)</div>
+</div>
+
+<div id="qa-panel" class="qa-panel">
+  <a href="/sales/new">🛒 New Sale</a>
+  <a href="/purchases/new">📦 New Purchase</a>
+  <a href="/sales#invoices">💳 Record Payment</a>
+  <a href="/journal-entries/new">🧾 Journal Entry</a>
+</div>
+
+<div class="cc-kpi-row">
+  <a class="kpi-card" href="/reports/profit-loss">
+    <div class="kpi-label">Revenue (This Month)</div>
+    <div class="kpi-value">₹{{ "%.2f"|format(period_comparison.revenue.current) }}</div>
+    {% if period_comparison.revenue.change_pct is not none %}
+      <div class="kpi-trend {{ 'up' if period_comparison.revenue.change_pct >= 0 else 'down' }}">
+        {{ '↑' if period_comparison.revenue.change_pct >= 0 else '↓' }} {{ period_comparison.revenue.change_pct|abs }}% vs last month
+      </div>
+    {% else %}
+      <div class="kpi-sub">No prior month to compare</div>
+    {% endif %}
+    <div class="kpi-sub">All-time: ₹{{ "%.2f"|format(total_sales) }}</div>
+    <div class="kpi-link">View Sales →</div>
+  </a>
+  <a class="kpi-card" href="/reports/profit-loss">
+    <div class="kpi-label">Expenses (This Month)</div>
+    <div class="kpi-value">₹{{ "%.2f"|format(period_comparison.expenses.current) }}</div>
+    {% if period_comparison.expenses.change_pct is not none %}
+      <div class="kpi-trend {{ 'down' if period_comparison.expenses.change_pct <= 0 else 'up' }}">
+        {{ '↑' if period_comparison.expenses.change_pct >= 0 else '↓' }} {{ period_comparison.expenses.change_pct|abs }}% vs last month
+      </div>
+    {% else %}
+      <div class="kpi-sub">No prior month to compare</div>
+    {% endif %}
+    <div class="kpi-sub">All-time: ₹{{ "%.2f"|format(total_purchases + other_expenses) }}</div>
+    <div class="kpi-link">View Purchases →</div>
+  </a>
+  <a class="kpi-card {{ 'accent-good' if period_comparison.net_profit.current >= 0 else 'accent-bad' }}" href="/reports/profit-loss">
+    <div class="kpi-label">Net Profit (This Month)</div>
+    <div class="kpi-value">₹{{ "%.2f"|format(period_comparison.net_profit.current) }}</div>
+    {% if period_comparison.net_profit.change_pct is not none %}
+      <div class="kpi-trend {{ 'up' if period_comparison.net_profit.change_pct >= 0 else 'down' }}">
+        {{ '↑' if period_comparison.net_profit.change_pct >= 0 else '↓' }} {{ period_comparison.net_profit.change_pct|abs }}% vs last month
+      </div>
+    {% else %}
+      <div class="kpi-sub">No prior month to compare</div>
+    {% endif %}
+    <div class="kpi-sub">All-time: ₹{{ "%.2f"|format(net_profit) }}</div>
+    <div class="kpi-link">View P&amp;L →</div>
+  </a>
+  <a class="kpi-card" href="/accounts">
+    <div class="kpi-label">Cash + Bank</div>
+    <div class="kpi-value">₹{{ "%.2f"|format(cash + bank) }}</div>
+    <div class="kpi-sub">Cash ₹{{ "%.2f"|format(cash) }} · Bank ₹{{ "%.2f"|format(bank) }}</div>
+    <div class="kpi-link">View Accounts →</div>
+  </a>
+  <a class="kpi-card" href="/sales#invoices">
+    <div class="kpi-label">Receivables</div>
+    <div class="kpi-value">₹{{ "%.2f"|format(receivables) }}</div>
+    <div class="kpi-sub">{{ receivables_detail.open_count }} open invoice(s)</div>
+    <div class="kpi-link">View Receivables →</div>
+  </a>
+  <a class="kpi-card" href="/purchases#bills">
+    <div class="kpi-label">Payables</div>
+    <div class="kpi-value">₹{{ "%.2f"|format(payables) }}</div>
+    <div class="kpi-sub">{{ payables_detail.open_count }} open bill(s)</div>
+    <div class="kpi-link">View Payables →</div>
+  </a>
+</div>
+
+{% if user.role.value == 'admin' %}
+<div class="panel">
+  <div class="panel-header"><h2>Business Pulse</h2></div>
+  <div class="panel-body cc-pulse-row">
+    <div class="pulse-card tone-{{ pulse.profitability.tone }}">
+      <div class="pulse-title">Profitability</div>
+      <div class="pulse-value">{{ pulse.profitability.label }}</div>
+      <div class="pulse-detail">{{ pulse.profitability.detail }}</div>
+    </div>
+    <div class="pulse-card tone-{{ pulse.cash_position.tone }}">
+      <div class="pulse-title">Cash Position</div>
+      <div class="pulse-value">{{ pulse.cash_position.label }}</div>
+      <div class="pulse-detail">{{ pulse.cash_position.detail }}</div>
+    </div>
+    <div class="pulse-card tone-{{ pulse.collections.tone }}">
+      <div class="pulse-title">Collections</div>
+      <div class="pulse-value">{{ pulse.collections.label }}</div>
+      <div class="pulse-detail">{{ pulse.collections.detail }}</div>
+    </div>
+    <div class="pulse-card tone-{{ pulse.budget_control.tone }}">
+      <div class="pulse-title">Budget Control</div>
+      <div class="pulse-value">{{ pulse.budget_control.label }}</div>
+      <div class="pulse-detail">{{ pulse.budget_control.detail }}</div>
+    </div>
   </div>
-  <div class="stat-card">
-    <div class="label">Payables</div>
-    <div class="value">₹{{ "%.2f"|format(payables) }}</div>
-    <div class="sub">Owed to vendors (Creditors)</div>
+</div>
+
+<div class="panel">
+  <div class="panel-header"><h2>Revenue vs Expenses</h2><span class="help-text">Last {{ trend|length }} months</span></div>
+  <div class="panel-body">
+    {% if chart.has_data %}
+    <svg viewBox="0 0 {{ chart.width }} {{ chart.height }}" class="trend-chart" role="img" aria-label="Revenue vs expenses trend">
+      <polyline points="{{ chart.revenue_points }}" class="trend-line revenue"></polyline>
+      <polyline points="{{ chart.expense_points }}" class="trend-line expenses"></polyline>
+      {% for label in chart.labels %}
+      <text x="{{ label.x }}" y="{{ chart.height - 8 }}" class="trend-label">{{ label.text }}</text>
+      {% endfor %}
+    </svg>
+    <div class="trend-legend">
+      <span><i class="legend-dot revenue"></i> Revenue</span>
+      <span><i class="legend-dot expenses"></i> Expenses</span>
+    </div>
+    {% else %}
+      <div class="empty-state"><div class="icon">📈</div>No transactions recorded yet — the chart will populate once sales and purchases are posted.</div>
+    {% endif %}
   </div>
-  <div class="stat-card">
-    <div class="label">Cash</div>
-    <div class="value">₹{{ "%.2f"|format(cash) }}</div>
+</div>
+{% endif %}
+
+<div class="grid-2">
+  <div class="panel">
+    <div class="panel-header"><h2>Receivables</h2><a class="btn small" href="/sales#invoices">View Receivables</a></div>
+    <div class="panel-body">
+      <div class="kv"><span class="k">Total Owed by Customers</span><span class="v">₹{{ "%.2f"|format(receivables_detail.total) }}</span></div>
+      <div class="kv"><span class="k">Open Invoices</span><span class="v">{{ receivables_detail.open_count }}</span></div>
+      <div class="kv"><span class="k">Overdue Amount</span><span class="v" style="color:{{ 'var(--danger)' if receivables_detail.overdue_amount > 0 else 'inherit' }};">₹{{ "%.2f"|format(receivables_detail.overdue_amount) }}</span></div>
+      <div class="kv"><span class="k">Overdue Invoices</span><span class="v">{{ receivables_detail.overdue_count }}</span></div>
+    </div>
   </div>
-  <div class="stat-card">
-    <div class="label">Bank</div>
-    <div class="value">₹{{ "%.2f"|format(bank) }}</div>
+  <div class="panel">
+    <div class="panel-header"><h2>Payables</h2><a class="btn small" href="/purchases#bills">View Payables</a></div>
+    <div class="panel-body">
+      <div class="kv"><span class="k">Total Owed to Vendors</span><span class="v">₹{{ "%.2f"|format(payables_detail.total) }}</span></div>
+      <div class="kv"><span class="k">Open Bills</span><span class="v">{{ payables_detail.open_count }}</span></div>
+      <div class="kv"><span class="k">Due Soon (7 days)</span><span class="v">₹{{ "%.2f"|format(payables_detail.due_soon_amount) }} ({{ payables_detail.due_soon_count }})</span></div>
+      <div class="kv"><span class="k">Overdue Amount</span><span class="v" style="color:{{ 'var(--danger)' if payables_detail.overdue_amount > 0 else 'inherit' }};">₹{{ "%.2f"|format(payables_detail.overdue_amount) }}</span></div>
+    </div>
   </div>
-  <div class="stat-card {{ 'accent-good' if net_profit >= 0 else 'accent-bad' }}">
-    <div class="label">Net Profit</div>
-    <div class="value">₹{{ "%.2f"|format(net_profit) }}</div>
-    <div class="sub">Income − Expenses</div>
+</div>
+
+<div class="panel">
+  <div class="panel-header"><h2>Action Center</h2></div>
+  <div class="panel-body">
+    {% if action_items %}
+      {% for item in action_items %}
+      <div class="action-item">
+        <span class="action-dot dot-{{ item.level }}"></span>
+        <div class="action-text">
+          {{ item.text }}
+          {% if item.amount is not none %}<strong>₹{{ "%.2f"|format(item.amount) }}</strong>{% endif %}
+        </div>
+        <a class="btn small" href="{{ item.url }}">{{ item.action }}</a>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="empty-state"><div class="icon">✅</div>You're all caught up.</div>
+    {% endif %}
   </div>
 </div>
 
@@ -75,22 +207,22 @@
         <tbody>
         {% for inv in recent_invoices %}
           <tr>
-            <td><a href="/sales/invoices/{{ inv.id }}">INV-{{ inv.id }}</a></td>
+            <td><a href="/sales/invoices/{{ inv.id }}">{{ inv.number }}</a></td>
             <td>{{ inv.customer.name }}</td>
             <td>{{ inv.invoice_date }}</td>
             <td class="num">₹{{ "%.2f"|format(inv.total) }}</td>
             <td>
-              {% set status = inv.status.value %}
-              {% if status == 'paid' %}<span class="badge green">Paid</span>
-              {% elif status == 'partially_paid' %}<span class="badge amber">Partially Paid</span>
-              {% else %}<span class="badge gray">Unpaid</span>{% endif %}
+              {% if inv.status.value == 'paid' %}<span class="badge green">Paid</span>
+              {% elif inv.is_overdue %}<span class="badge red">Overdue</span>
+              {% elif inv.status.value == 'partially_paid' %}<span class="badge amber">Partially Paid</span>
+              {% else %}<span class="badge gray">Not Paid</span>{% endif %}
             </td>
           </tr>
         {% endfor %}
         </tbody>
       </table>
       {% else %}
-        <div class="empty-state"><div class="icon">🧾</div>No invoices yet.</div>
+        <div class="empty-state"><div class="icon">🧾</div>No invoices found yet.</div>
       {% endif %}
     </div>
   </div>
@@ -103,22 +235,22 @@
         <tbody>
         {% for bill in recent_bills %}
           <tr>
-            <td><a href="/purchases/bills/{{ bill.id }}">BILL-{{ bill.id }}</a></td>
+            <td><a href="/purchases/bills/{{ bill.id }}">{{ bill.number }}</a></td>
             <td>{{ bill.vendor.name }}</td>
             <td>{{ bill.due_date }}</td>
             <td class="num">₹{{ "%.2f"|format(bill.total) }}</td>
             <td>
-              {% set status = bill.status.value %}
-              {% if status == 'paid' %}<span class="badge green">Paid</span>
-              {% elif status == 'partially_paid' %}<span class="badge amber">Partially Paid</span>
-              {% else %}<span class="badge gray">Unpaid</span>{% endif %}
+              {% if bill.status.value == 'paid' %}<span class="badge green">Paid</span>
+              {% elif bill.is_overdue %}<span class="badge red">Overdue</span>
+              {% elif bill.status.value == 'partially_paid' %}<span class="badge amber">Partially Paid</span>
+              {% else %}<span class="badge gray">Not Paid</span>{% endif %}
             </td>
           </tr>
         {% endfor %}
         </tbody>
       </table>
       {% else %}
-        <div class="empty-state"><div class="icon">📦</div>No bills yet.</div>
+        <div class="empty-state"><div class="icon">📦</div>No bills found yet.</div>
       {% endif %}
     </div>
   </div>

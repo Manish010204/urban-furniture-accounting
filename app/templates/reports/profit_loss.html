@@ -11,17 +11,27 @@
     <button class="btn small" type="submit">Update</button>
   </form>
 </div>
-<div class="panel" style="max-width:640px;">
+<div class="panel" style="max-width:720px;">
   <div class="panel-body">
     <p class="help-text" style="margin-top:0;">Income</p>
     {% for row in data.income %}
-    <div class="kv"><span class="k">{{ row.account.name }}</span><span class="v">₹{{ "%.2f"|format(row.balance) }}</span></div>
+    <div class="kv"><span class="k">{{ row.account.name }}</span>
+      <span class="v" style="display:flex;align-items:center;gap:10px;">
+        ₹{{ "%.2f"|format(row.balance) }}
+        <a class="btn small" href="/journal-entries?account={{ row.account.id }}">View Transactions</a>
+      </span>
+    </div>
     {% endfor %}
     <div class="kv"><span class="k"><strong>Total Income</strong></span><span class="v"><strong>₹{{ "%.2f"|format(data.total_income) }}</strong></span></div>
 
     <p class="help-text" style="margin-top:16px;">Expenses</p>
     {% for row in data.expenses %}
-    <div class="kv"><span class="k">{{ row.account.name }}</span><span class="v">₹{{ "%.2f"|format(row.balance) }}</span></div>
+    <div class="kv"><span class="k">{{ row.account.name }}</span>
+      <span class="v" style="display:flex;align-items:center;gap:10px;">
+        ₹{{ "%.2f"|format(row.balance) }}
+        <a class="btn small" href="/journal-entries?account={{ row.account.id }}">View Transactions</a>
+      </span>
+    </div>
     {% endfor %}
     <div class="kv"><span class="k"><strong>Total Expenses</strong></span><span class="v"><strong>₹{{ "%.2f"|format(data.total_expenses) }}</strong></span></div>
 
@@ -29,6 +39,12 @@
       <span class="k"><strong>Net Profit</strong></span>
       <span class="v"><strong style="color:{{ 'var(--success)' if data.net_profit >= 0 else 'var(--danger)' }};">₹{{ "%.2f"|format(data.net_profit) }}</strong></span>
     </div>
+    {% if data.total_income %}
+    <div class="kv">
+      <span class="k">Profit Margin</span>
+      <span class="v">{{ "%.1f"|format(data.net_profit / data.total_income * 100) }}%</span>
+    </div>
+    {% endif %}
   </div>
 </div>
 {% endblock %}

@@ -353,6 +353,10 @@ class VendorBill(Base):
     def amount_due(self) -> float:
         return round(self.total - self.amount_paid, 2)
 
+    @property
+    def is_overdue(self) -> bool:
+        return self.status != BillStatus.paid and self.due_date < date_type.today()
+
 
 class VendorBillLine(Base):
     __tablename__ = "vendor_bill_lines"
@@ -477,6 +481,10 @@ class CustomerInvoice(Base):
     @property
     def amount_due(self) -> float:
         return round(self.total - self.amount_paid, 2)
+
+    @property
+    def is_overdue(self) -> bool:
+        return self.status != InvoiceStatus.paid and self.due_date < date_type.today()
 
 
 class CustomerInvoiceLine(Base):

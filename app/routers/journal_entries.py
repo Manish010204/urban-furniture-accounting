@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.auth import require_role
 from app.database import get_db
-from app.models import Account, Contact, Journal, JournalEntry, User
+from app.models import Account, Contact, Journal, JournalEntry, JournalEntryLine, User
 from app.services.accounting import UnbalancedEntryError, create_journal_entry
 from app.templating import templates
 
@@ -15,11 +15,19 @@ router = APIRouter(prefix="/journal-entries", tags=["journal_entries"])
 
 
 @router.get("")
-def list_entries(request: Request, user: User = Depends(require_role("admin", "accountant")),
+def list_entries(request: Request, account: int = None,
+                  user: User = Depends(require_role("admin", "accountant")),
                   db: Session = Depends(get_db)):
-    entries = db.scalars(select(JournalEntry).order_by(JournalEntry.id.desc())).all()
+    query = select(JournalEntry)
+    account_filter = None
+    if account:
+        account_filter = db.get(Account, account)
+        query = query.join(JournalEntryLine, JournalEntryLine.entry_id == JournalEntry.id) \
+                      .where(JournalEntryLine.account_id == account).distinct()
+    entries = db.scalars(query.order_by(JournalEntry.id.desc())).all()
     return templates.TemplateResponse(request, "journal_entries/list.html", {
         "request": request, "user": user, "active": "journal_entries", "entries": entries,
+        "account_filter": account_filter,
     })
 
 

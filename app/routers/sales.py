@@ -47,12 +47,24 @@ def _analytic_accounts(db: Session):
 
 
 @router.get("")
-def list_sales_orders(request: Request, user: User = Depends(require_role("admin", "accountant")),
+def list_sales_orders(request: Request, so_status: str = "", inv_status: str = "",
+                       user: User = Depends(require_role("admin", "accountant")),
                        db: Session = Depends(get_db)):
-    orders = db.scalars(select(SalesOrder).order_by(SalesOrder.id.desc())).all()
-    invoices = db.scalars(select(CustomerInvoice).order_by(CustomerInvoice.id.desc())).all()
+    so_query = select(SalesOrder)
+    if so_status:
+        so_query = so_query.where(SalesOrder.status == SOStatus(so_status))
+    orders = db.scalars(so_query.order_by(SalesOrder.id.desc())).all()
+
+    inv_query = select(CustomerInvoice)
+    if inv_status and inv_status != "overdue":
+        inv_query = inv_query.where(CustomerInvoice.status == InvoiceStatus(inv_status))
+    invoices = db.scalars(inv_query.order_by(CustomerInvoice.id.desc())).all()
+    if inv_status == "overdue":
+        invoices = [i for i in invoices if i.is_overdue]
+
     return templates.TemplateResponse(request, "sales/list.html", {
         "request": request, "user": user, "active": "sales", "orders": orders, "invoices": invoices,
+        "so_status": so_status, "inv_status": inv_status,
     })
 
 

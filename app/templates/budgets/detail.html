@@ -30,25 +30,29 @@
     <div class="kv"><span class="k">Revised With</span><span class="v"><a href="/budgets/{{ revised_by.id }}">{{ revised_by.name }}</a></span></div>
     {% endif %}
 
-    <table style="margin-top:16px;">
-      <thead><tr><th>Analytic Account</th><th>Type</th><th>Committed</th>
-        {% if row.total_achieved is not none %}<th>Achieved</th><th>Achieved %</th><th>Amount to Achieve</th>{% endif %}
-      </tr></thead>
-      <tbody>
-      {% for lr in row.lines %}
-        <tr>
-          <td>{{ lr.line.analytic_account.name }}</td>
-          <td><span class="badge blue">{{ lr.line.type.value|title }}</span></td>
-          <td class="num">₹{{ "%.2f"|format(lr.line.committed_amount) }}</td>
-          {% if lr.achieved is not none %}
-          <td class="num">₹{{ "%.2f"|format(lr.achieved) }}</td>
-          <td class="num">{{ lr.achieved_pct }}%</td>
-          <td class="num">₹{{ "%.2f"|format(lr.amount_to_achieve) }}</td>
-          {% endif %}
-        </tr>
-      {% endfor %}
-      </tbody>
-    </table>
+    <div style="margin-top:16px;display:flex;flex-direction:column;gap:16px;">
+    {% for lr in row.lines %}
+      <div style="border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <strong>{{ lr.line.analytic_account.name }}</strong>
+          <span class="badge blue">{{ lr.line.type.value|title }}</span>
+        </div>
+        <div class="kv"><span class="k">Committed</span><span class="v">₹{{ "%.2f"|format(lr.line.committed_amount) }}</span></div>
+        {% if lr.achieved is not none %}
+          <div class="kv"><span class="k">Achieved</span><span class="v">₹{{ "%.2f"|format(lr.achieved) }}</span></div>
+          <div class="kv"><span class="k">Amount to Achieve</span><span class="v">₹{{ "%.2f"|format(lr.amount_to_achieve) }}</span></div>
+          {% set pct = lr.achieved_pct %}
+          {% set tone = 'tone-bad' if pct >= 100 else ('tone-warning' if pct >= 90 else '') %}
+          <div class="progress-track" style="margin-top:8px;">
+            <div class="progress-fill {{ tone }}" style="width:{{ [pct, 100]|min }}%;"></div>
+          </div>
+          <div style="text-align:right;font-size:12px;color:var(--text-muted);margin-top:4px;">{{ pct }}%</div>
+        {% else %}
+          <p class="help-text" style="margin-top:8px;">Achieved amount is only tracked once this budget is confirmed.</p>
+        {% endif %}
+      </div>
+    {% endfor %}
+    </div>
   </div>
 </div>
 {% endblock %}

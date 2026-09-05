@@ -1,7 +1,37 @@
 {% extends "base.html" %}
-{% block title %}My Invoices & Bills{% endblock %}
-{% block heading %}My Invoices &amp; Bills{% endblock %}
+{% block title %}My Financial Portal{% endblock %}
+{% block heading %}{% endblock %}
 {% block content %}
+<div class="cc-header">
+  <div>
+    <div class="cc-greeting">Welcome, {{ user.name.split(' ')[0] }}</div>
+    <div class="cc-subtitle">My Financial Portal</div>
+  </div>
+</div>
+
+<div class="portal-kpi-row">
+  <div class="kpi-card">
+    <div class="kpi-label">Total Invoices</div>
+    <div class="kpi-value">{{ total_invoices }}</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">Paid</div>
+    <div class="kpi-value" style="color:var(--success);">{{ paid_invoices }}</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">Unpaid</div>
+    <div class="kpi-value">{{ unpaid_invoices }}</div>
+  </div>
+  <div class="kpi-card {{ 'accent-bad' if overdue_invoices > 0 }}">
+    <div class="kpi-label">Overdue</div>
+    <div class="kpi-value" style="color:{{ 'var(--danger)' if overdue_invoices > 0 else 'inherit' }};">{{ overdue_invoices }}</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">Outstanding Amount</div>
+    <div class="kpi-value">₹{{ "%.2f"|format(outstanding_amount) }}</div>
+  </div>
+</div>
+
 <div class="panel">
   <div class="panel-header"><h2>My Invoices</h2></div>
   <div class="panel-body">
@@ -11,15 +41,15 @@
       <tbody>
       {% for inv in invoices %}
         <tr>
-          <td>INV-{{ inv.id }}</td>
+          <td><a href="/sales/invoices/{{ inv.id }}">{{ inv.number }}</a></td>
           <td>{{ inv.invoice_date }}</td>
           <td class="num">₹{{ "%.2f"|format(inv.total) }}</td>
           <td class="num">₹{{ "%.2f"|format(inv.amount_due) }}</td>
           <td>
-            {% set status = inv.status.value %}
-            {% if status == 'paid' %}<span class="badge green">Paid</span>
-            {% elif status == 'partially_paid' %}<span class="badge amber">Partially Paid</span>
-            {% else %}<span class="badge gray">Unpaid</span>{% endif %}
+            {% if inv.status.value == 'paid' %}<span class="badge green">Paid</span>
+            {% elif inv.is_overdue %}<span class="badge red">Overdue</span>
+            {% elif inv.status.value == 'partially_paid' %}<span class="badge amber">Partially Paid</span>
+            {% else %}<span class="badge gray">Not Paid</span>{% endif %}
           </td>
           <td>
             {% if inv.status.value != 'paid' %}
@@ -44,15 +74,15 @@
       <tbody>
       {% for bill in bills %}
         <tr>
-          <td>BILL-{{ bill.id }}</td>
+          <td><a href="/purchases/bills/{{ bill.id }}">{{ bill.number }}</a></td>
           <td>{{ bill.due_date }}</td>
           <td class="num">₹{{ "%.2f"|format(bill.total) }}</td>
           <td class="num">₹{{ "%.2f"|format(bill.amount_due) }}</td>
           <td>
-            {% set status = bill.status.value %}
-            {% if status == 'paid' %}<span class="badge green">Paid</span>
-            {% elif status == 'partially_paid' %}<span class="badge amber">Partially Paid</span>
-            {% else %}<span class="badge gray">Unpaid</span>{% endif %}
+            {% if bill.status.value == 'paid' %}<span class="badge green">Paid</span>
+            {% elif bill.is_overdue %}<span class="badge red">Overdue</span>
+            {% elif bill.status.value == 'partially_paid' %}<span class="badge amber">Partially Paid</span>
+            {% else %}<span class="badge gray">Not Paid</span>{% endif %}
           </td>
           <td>
             {% if bill.status.value != 'paid' %}

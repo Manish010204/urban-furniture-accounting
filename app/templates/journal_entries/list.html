@@ -8,6 +8,12 @@
     <a class="btn primary" href="/journal-entries/new">+ New Manual Entry</a>
   </div>
   <div class="panel-body">
+    {% if account_filter %}
+    <div class="flash success" style="display:flex;justify-content:space-between;align-items:center;">
+      <span>Showing transactions for <strong>{{ account_filter.name }}</strong> only.</span>
+      <a class="btn small" href="/journal-entries">Clear filter</a>
+    </div>
+    {% endif %}
     {% if entries %}
     <table>
       <thead><tr><th>#</th><th>Journal</th><th>Date</th><th>Partner</th><th>Reference</th><th>Debit</th><th>Credit</th><th>Status</th></tr></thead>

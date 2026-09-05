@@ -8,6 +8,13 @@
     <a class="btn primary" href="/purchases/new">+ New Purchase Order</a>
   </div>
   <div class="panel-body">
+    <div class="status-chip-row">
+      <a class="status-chip {{ 'active' if not po_status }}" href="/purchases">All</a>
+      <a class="status-chip {{ 'active' if po_status=='draft' }}" href="/purchases?po_status=draft">Draft</a>
+      <a class="status-chip {{ 'active' if po_status=='confirmed' }}" href="/purchases?po_status=confirmed">Confirmed</a>
+      <a class="status-chip {{ 'active' if po_status=='billed' }}" href="/purchases?po_status=billed">Billed</a>
+      <a class="status-chip {{ 'active' if po_status=='cancelled' }}" href="/purchases?po_status=cancelled">Cancelled</a>
+    </div>
     {% if orders %}
     <table>
       <thead><tr><th>#</th><th>Vendor</th><th>Date</th><th>Total</th><th>Status</th><th></th></tr></thead>
@@ -31,7 +38,7 @@
       </tbody>
     </table>
     {% else %}
-      <div class="empty-state"><div class="icon">📦</div>No purchase orders yet. Create one to get started.</div>
+      <div class="empty-state"><div class="icon">📦</div>No purchase orders match this filter.</div>
     {% endif %}
   </div>
 </div>
@@ -39,6 +46,13 @@
 <div class="panel" id="bills">
   <div class="panel-header"><h2>Vendor Bills</h2></div>
   <div class="panel-body">
+    <div class="status-chip-row">
+      <a class="status-chip {{ 'active' if not bill_status }}" href="/purchases#bills">All</a>
+      <a class="status-chip {{ 'active' if bill_status=='unpaid' }}" href="/purchases?bill_status=unpaid#bills">Not Paid</a>
+      <a class="status-chip {{ 'active' if bill_status=='partially_paid' }}" href="/purchases?bill_status=partially_paid#bills">Partially Paid</a>
+      <a class="status-chip {{ 'active' if bill_status=='paid' }}" href="/purchases?bill_status=paid#bills">Paid</a>
+      <a class="status-chip {{ 'active' if bill_status=='overdue' }}" href="/purchases?bill_status=overdue#bills">Overdue</a>
+    </div>
     {% if bills %}
     <table>
       <thead><tr><th>#</th><th>Vendor</th><th>Invoice Date</th><th>Due Date</th><th>Total</th><th>Due</th><th>Status</th><th></th></tr></thead>
@@ -53,6 +67,7 @@
           <td class="num">₹{{ "%.2f"|format(bill.amount_due) }}</td>
           <td>
             {% if bill.status.value == 'paid' %}<span class="badge green">Paid</span>
+            {% elif bill.is_overdue %}<span class="badge red">Overdue</span>
             {% elif bill.status.value == 'partially_paid' %}<span class="badge amber">Partially Paid</span>
             {% else %}<span class="badge gray">Not Paid</span>{% endif %}
           </td>
@@ -64,7 +79,7 @@
       </tbody>
     </table>
     {% else %}
-      <div class="empty-state"><div class="icon">🧾</div>No vendor bills yet.</div>
+      <div class="empty-state"><div class="icon">🧾</div>No vendor bills match this filter.</div>
     {% endif %}
   </div>
 </div>

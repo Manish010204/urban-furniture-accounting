@@ -14,7 +14,12 @@
     <div class="panel-header"><h2>Assets</h2></div>
     <div class="panel-body">
       {% for row in data.assets %}
-      <div class="kv"><span class="k">{{ row.account.name }}</span><span class="v">₹{{ "%.2f"|format(row.balance) }}</span></div>
+      <div class="kv"><span class="k">{{ row.account.name }}</span>
+        <span class="v" style="display:flex;align-items:center;gap:10px;">
+          ₹{{ "%.2f"|format(row.balance) }}
+          <a class="btn small" href="/journal-entries?account={{ row.account.id }}">View Transactions</a>
+        </span>
+      </div>
       {% endfor %}
       <div class="kv" style="border-top:2px solid var(--border);margin-top:6px;"><span class="k"><strong>Total Assets</strong></span><span class="v"><strong>₹{{ "%.2f"|format(data.total_assets) }}</strong></span></div>
     </div>
@@ -24,12 +29,22 @@
     <div class="panel-body">
       <p class="help-text" style="margin-top:0;">Liabilities</p>
       {% for row in data.liabilities %}
-      <div class="kv"><span class="k">{{ row.account.name }}</span><span class="v">₹{{ "%.2f"|format(row.balance) }}</span></div>
+      <div class="kv"><span class="k">{{ row.account.name }}</span>
+        <span class="v" style="display:flex;align-items:center;gap:10px;">
+          ₹{{ "%.2f"|format(row.balance) }}
+          <a class="btn small" href="/journal-entries?account={{ row.account.id }}">View Transactions</a>
+        </span>
+      </div>
       {% endfor %}
       <div class="kv"><span class="k"><strong>Total Liabilities</strong></span><span class="v"><strong>₹{{ "%.2f"|format(data.total_liabilities) }}</strong></span></div>
       <p class="help-text" style="margin-top:14px;">Capital</p>
       {% for row in data.capital %}
-      <div class="kv"><span class="k">{{ row.account.name }}</span><span class="v">₹{{ "%.2f"|format(row.balance) }}</span></div>
+      <div class="kv"><span class="k">{{ row.account.name }}</span>
+        <span class="v" style="display:flex;align-items:center;gap:10px;">
+          ₹{{ "%.2f"|format(row.balance) }}
+          <a class="btn small" href="/journal-entries?account={{ row.account.id }}">View Transactions</a>
+        </span>
+      </div>
       {% endfor %}
       <div class="kv"><span class="k">Retained Earnings (Net Profit)</span><span class="v">₹{{ "%.2f"|format(data.retained_earnings) }}</span></div>
       <div class="kv"><span class="k"><strong>Total Capital</strong></span><span class="v"><strong>₹{{ "%.2f"|format(data.total_capital) }}</strong></span></div>

@@ -2,6 +2,18 @@
 {% block title %}{{ so.number }}{% endblock %}
 {% block heading %}Sales Order {{ so.number }}{% endblock %}
 {% block content %}
+{% if so.status.value != 'cancelled' %}
+{% set invoice_paid = so.invoice and so.invoice.status.value == 'paid' %}
+<div class="workflow-steps">
+  <span class="workflow-step {{ 'current' if so.status.value == 'draft' else 'done' }}">Draft</span>
+  <span class="workflow-arrow">→</span>
+  <span class="workflow-step {{ 'current' if so.status.value == 'confirmed' else ('done' if so.invoice else '') }}">Confirmed</span>
+  <span class="workflow-arrow">→</span>
+  <span class="workflow-step {{ 'done' if invoice_paid else ('current' if so.invoice else '') }}">Invoiced</span>
+  <span class="workflow-arrow">→</span>
+  <span class="workflow-step {{ 'done' if invoice_paid else '' }}">Paid</span>
+</div>
+{% endif %}
 <div class="grid-2">
   <div class="panel">
     <div class="panel-header">

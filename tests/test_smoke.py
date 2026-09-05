@@ -284,6 +284,59 @@ def test_404_page_renders(client):
     assert "Page not found" in r.text
 
 
+def test_dashboard_shows_business_command_center_sections(client):
+    login(client)
+    r = client.get("/")
+    assert "Business Pulse" in r.text
+    assert "Revenue vs Expenses" in r.text
+    assert "Action Center" in r.text
+    assert "Receivables" in r.text and "Payables" in r.text
+
+
+def test_sales_status_filters_work(client):
+    login(client)
+    r = client.get("/sales?so_status=draft")
+    assert r.status_code == 200
+    r = client.get("/sales?inv_status=overdue")
+    assert r.status_code == 200
+
+
+def test_purchase_status_filters_work(client):
+    login(client)
+    r = client.get("/purchases?po_status=confirmed")
+    assert r.status_code == 200
+    r = client.get("/purchases?bill_status=overdue")
+    assert r.status_code == 200
+
+
+def test_contact_360_view_shows_financial_summary(client):
+    login(client)
+    r = client.get("/contacts/2")  # Nimesh Pathak, seeded customer
+    assert r.status_code == 200
+    assert "Total Sales" in r.text
+
+
+def test_product_detail_shows_gross_margin(client):
+    login(client)
+    r = client.get("/products/1")  # Office Chair
+    assert r.status_code == 200
+    assert "Gross Margin" in r.text
+    assert "₹1700.00" in r.text.replace(",", "")  # 4500 - 2800
+
+
+def test_journal_entries_drill_down_by_account(client):
+    login(client)
+    r = client.get("/accounts")
+    account_id = None
+    import re
+    match = re.search(r'/accounts/(\d+)/edit', r.text)
+    assert match
+    account_id = int(match.group(1))
+    r = client.get(f"/journal-entries?account={account_id}")
+    assert r.status_code == 200
+    assert "Clear filter" in r.text
+
+
 def test_dashboard_shows_order_status_counts(client):
     login(client)
     r = client.get("/")

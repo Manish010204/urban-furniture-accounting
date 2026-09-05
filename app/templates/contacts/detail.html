@@ -2,6 +2,22 @@
 {% block title %}{{ contact.name }}{% endblock %}
 {% block heading %}{{ contact.name }}{% endblock %}
 {% block content %}
+{% if sales_summary %}
+<div class="portal-kpi-row">
+  <div class="kpi-card"><div class="kpi-label">Total Sales</div><div class="kpi-value">₹{{ "%.2f"|format(sales_summary.total_sales) }}</div></div>
+  <div class="kpi-card"><div class="kpi-label">Total Paid</div><div class="kpi-value" style="color:var(--success);">₹{{ "%.2f"|format(sales_summary.total_paid) }}</div></div>
+  <div class="kpi-card"><div class="kpi-label">Outstanding</div><div class="kpi-value">₹{{ "%.2f"|format(sales_summary.outstanding) }}</div></div>
+  <div class="kpi-card {{ 'accent-bad' if sales_summary.overdue > 0 }}"><div class="kpi-label">Overdue</div><div class="kpi-value" style="color:{{ 'var(--danger)' if sales_summary.overdue > 0 else 'inherit' }};">₹{{ "%.2f"|format(sales_summary.overdue) }}</div></div>
+</div>
+{% endif %}
+{% if purchase_summary %}
+<div class="portal-kpi-row">
+  <div class="kpi-card"><div class="kpi-label">Total Purchases</div><div class="kpi-value">₹{{ "%.2f"|format(purchase_summary.total_purchases) }}</div></div>
+  <div class="kpi-card"><div class="kpi-label">Total Paid</div><div class="kpi-value" style="color:var(--success);">₹{{ "%.2f"|format(purchase_summary.total_paid) }}</div></div>
+  <div class="kpi-card"><div class="kpi-label">Outstanding</div><div class="kpi-value">₹{{ "%.2f"|format(purchase_summary.outstanding) }}</div></div>
+  <div class="kpi-card {{ 'accent-bad' if purchase_summary.overdue > 0 }}"><div class="kpi-label">Overdue</div><div class="kpi-value" style="color:{{ 'var(--danger)' if purchase_summary.overdue > 0 else 'inherit' }};">₹{{ "%.2f"|format(purchase_summary.overdue) }}</div></div>
+</div>
+{% endif %}
 <div class="grid-2">
   <div class="panel">
     <div class="panel-header"><h2>Details</h2>
@@ -40,4 +56,66 @@
     </div>
   </div>
 </div>
+
+{% if sales_summary %}
+<div class="panel">
+  <div class="panel-header"><h2>Invoices</h2></div>
+  <div class="panel-body">
+    {% if sales_summary.invoices %}
+    <table>
+      <thead><tr><th>#</th><th>Date</th><th>Total</th><th>Amount Due</th><th>Status</th></tr></thead>
+      <tbody>
+      {% for inv in sales_summary.invoices %}
+        <tr>
+          <td><a href="/sales/invoices/{{ inv.id }}">{{ inv.number }}</a></td>
+          <td>{{ inv.invoice_date }}</td>
+          <td class="num">₹{{ "%.2f"|format(inv.total) }}</td>
+          <td class="num">₹{{ "%.2f"|format(inv.amount_due) }}</td>
+          <td>
+            {% if inv.status.value == 'paid' %}<span class="badge green">Paid</span>
+            {% elif inv.is_overdue %}<span class="badge red">Overdue</span>
+            {% elif inv.status.value == 'partially_paid' %}<span class="badge amber">Partially Paid</span>
+            {% else %}<span class="badge gray">Not Paid</span>{% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+      <div class="empty-state"><div class="icon">🧾</div>No invoices yet for this customer.</div>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+{% if purchase_summary %}
+<div class="panel">
+  <div class="panel-header"><h2>Bills</h2></div>
+  <div class="panel-body">
+    {% if purchase_summary.bills %}
+    <table>
+      <thead><tr><th>#</th><th>Due Date</th><th>Total</th><th>Amount Due</th><th>Status</th></tr></thead>
+      <tbody>
+      {% for bill in purchase_summary.bills %}
+        <tr>
+          <td><a href="/purchases/bills/{{ bill.id }}">{{ bill.number }}</a></td>
+          <td>{{ bill.due_date }}</td>
+          <td class="num">₹{{ "%.2f"|format(bill.total) }}</td>
+          <td class="num">₹{{ "%.2f"|format(bill.amount_due) }}</td>
+          <td>
+            {% if bill.status.value == 'paid' %}<span class="badge green">Paid</span>
+            {% elif bill.is_overdue %}<span class="badge red">Overdue</span>
+            {% elif bill.status.value == 'partially_paid' %}<span class="badge amber">Partially Paid</span>
+            {% else %}<span class="badge gray">Not Paid</span>{% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+      <div class="empty-state"><div class="icon">📦</div>No bills yet for this vendor.</div>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
 {% endblock %}

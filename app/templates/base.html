@@ -11,7 +11,7 @@
 {% if user %}
 {% set sales_group = ['sales'] %}
 {% set purchase_group = ['purchases'] %}
-{% set account_group = ['contacts', 'products', 'accounts', 'journals', 'journal_entries', 'analytic', 'budgets'] %}
+{% set account_group = ['accounts', 'journals', 'journal_entries', 'analytic', 'budgets'] %}
 {% set report_group = ['reports'] %}
 <div class="app-shell">
   <header class="topnav">
@@ -36,25 +36,25 @@
         </div>
       </div>
       <div class="dropdown">
-        <button type="button" class="topnav-link dropdown-toggle {{ 'active' if active in account_group }}" aria-haspopup="true" aria-expanded="false">Account ▾</button>
+        <button type="button" class="topnav-link dropdown-toggle {{ 'active' if active in account_group }}" aria-haspopup="true" aria-expanded="false">Accounting ▾</button>
         <div class="dropdown-panel" role="menu">
-          <a href="/contacts" role="menuitem">Contact</a>
-          <a href="/products" role="menuitem">Product</a>
-          <a href="/analytic-accounts" role="menuitem">Analyticals</a>
-          <a href="/budgets" role="menuitem">Analytical Budget</a>
-          <a href="/accounts" role="menuitem">Chart of Account</a>
+          <a href="/accounts" role="menuitem">Chart of Accounts</a>
           <a href="/journals" role="menuitem">Journals</a>
           <a href="/journal-entries" role="menuitem">Journal Entries</a>
+          <a href="/analytic-accounts" role="menuitem">Analytic Accounts</a>
+          <a href="/budgets" role="menuitem">Budgets</a>
         </div>
       </div>
       <div class="dropdown">
-        <button type="button" class="topnav-link dropdown-toggle {{ 'active' if active in report_group }}" aria-haspopup="true" aria-expanded="false">Report ▾</button>
+        <button type="button" class="topnav-link dropdown-toggle {{ 'active' if active in report_group }}" aria-haspopup="true" aria-expanded="false">Reports ▾</button>
         <div class="dropdown-panel" role="menu">
+          <a href="/reports/profit-loss" role="menuitem">Profit &amp; Loss</a>
           <a href="/reports/balance-sheet" role="menuitem">Balance Sheet</a>
-          <a href="/reports/profit-loss" role="menuitem">Profit and Loss</a>
           <a href="/reports/budget" role="menuitem">Budget Report</a>
         </div>
       </div>
+      <a class="topnav-link {{ 'active' if active=='contacts' }}" href="/contacts">Contacts</a>
+      <a class="topnav-link {{ 'active' if active=='products' }}" href="/products">Products</a>
     </nav>
     {% else %}
     <nav class="topnav-menu">
@@ -68,9 +68,12 @@
     </div>
   </header>
   <div class="main">
+    {% set heading_content %}{% block heading %}{% endblock %}{% endset %}
+    {% if heading_content.strip() %}
     <div class="pageheader">
-      <h1>{% block heading %}{% endblock %}</h1>
+      <h1>{{ heading_content }}</h1>
     </div>
+    {% endif %}
     <div class="content">
       {% if request.query_params.get('error') %}
         <div class="flash error">{{ request.query_params.get('error') }}</div>

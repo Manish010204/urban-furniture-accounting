@@ -10,6 +10,7 @@ from app.auth import require_role
 from app.database import get_db
 from app.models import (
     AnalyticAccount,
+    BillStatus,
     Contact,
     ContactType,
     Journal,
@@ -49,12 +50,24 @@ def _analytic_accounts(db: Session):
 
 
 @router.get("")
-def list_purchase_orders(request: Request, user: User = Depends(require_role("admin", "accountant")),
+def list_purchase_orders(request: Request, po_status: str = "", bill_status: str = "",
+                          user: User = Depends(require_role("admin", "accountant")),
                           db: Session = Depends(get_db)):
-    orders = db.scalars(select(PurchaseOrder).order_by(PurchaseOrder.id.desc())).all()
-    bills = db.scalars(select(VendorBill).order_by(VendorBill.id.desc())).all()
+    po_query = select(PurchaseOrder)
+    if po_status:
+        po_query = po_query.where(PurchaseOrder.status == POStatus(po_status))
+    orders = db.scalars(po_query.order_by(PurchaseOrder.id.desc())).all()
+
+    bill_query = select(VendorBill)
+    if bill_status and bill_status != "overdue":
+        bill_query = bill_query.where(VendorBill.status == BillStatus(bill_status))
+    bills = db.scalars(bill_query.order_by(VendorBill.id.desc())).all()
+    if bill_status == "overdue":
+        bills = [b for b in bills if b.is_overdue]
+
     return templates.TemplateResponse(request, "purchases/list.html", {
         "request": request, "user": user, "active": "purchases", "orders": orders, "bills": bills,
+        "po_status": po_status, "bill_status": bill_status,
     })
 
 

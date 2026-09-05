@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.auth import require_role
 from app.database import get_db
-from app.models import Product, ProductType, User
+from app.models import CustomerInvoiceLine, Product, ProductType, PurchaseOrderLine, SalesOrderLine, User, VendorBillLine
 from app.templating import templates
 from app.validators import ValidationError
 
@@ -91,8 +91,27 @@ def product_detail(product_id: int, request: Request,
     product = db.get(Product, product_id)
     if not product:
         return RedirectResponse(url="/products?error=Product+not+found", status_code=303)
+
+    gross_margin = round(product.sales_price - product.cost_price, 2)
+    gross_margin_pct = round(gross_margin / product.sales_price * 100, 1) if product.sales_price else None
+
+    sales_lines = db.scalars(select(SalesOrderLine).where(SalesOrderLine.product_id == product.id)).all()
+    invoice_lines = db.scalars(select(CustomerInvoiceLine).where(CustomerInvoiceLine.product_id == product.id)).all()
+    purchase_lines = db.scalars(select(PurchaseOrderLine).where(PurchaseOrderLine.product_id == product.id)).all()
+    bill_lines = db.scalars(select(VendorBillLine).where(VendorBillLine.product_id == product.id)).all()
+
+    activity = {
+        "units_sold": sum(l.qty for l in invoice_lines),
+        "revenue": round(sum(l.subtotal for l in invoice_lines), 2),
+        "units_ordered_sales": sum(l.qty for l in sales_lines),
+        "units_purchased": sum(l.qty for l in bill_lines),
+        "spend": round(sum(l.total for l in bill_lines), 2),
+        "units_ordered_purchase": sum(l.qty for l in purchase_lines),
+    }
+
     return templates.TemplateResponse(request, "products/detail.html", {
         "request": request, "user": user, "active": "products", "product": product,
+        "gross_margin": gross_margin, "gross_margin_pct": gross_margin_pct, "activity": activity,
     })
 
 

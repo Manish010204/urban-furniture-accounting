@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.auth import require_role
 from app.database import get_db
-from app.models import Contact, ContactType, User
+from app.models import Contact, ContactType, CustomerInvoice, User, VendorBill
 from app.templating import templates
 from app.validators import ValidationError, validate_email, validate_pincode
 
@@ -96,8 +96,38 @@ def contact_detail(contact_id: int, request: Request,
     contact = db.get(Contact, contact_id)
     if not contact:
         return RedirectResponse(url="/contacts?error=Contact+not+found", status_code=303)
+
+    sales_summary = None
+    if contact.type in (ContactType.customer, ContactType.both):
+        invoices = db.scalars(
+            select(CustomerInvoice).where(CustomerInvoice.customer_id == contact.id)
+            .order_by(CustomerInvoice.id.desc())
+        ).all()
+        sales_summary = {
+            "invoices": invoices,
+            "total_sales": round(sum(i.total for i in invoices), 2),
+            "total_paid": round(sum(i.amount_paid for i in invoices), 2),
+            "outstanding": round(sum(i.amount_due for i in invoices), 2),
+            "overdue": round(sum(i.amount_due for i in invoices if i.is_overdue), 2),
+        }
+
+    purchase_summary = None
+    if contact.type in (ContactType.vendor, ContactType.both):
+        bills = db.scalars(
+            select(VendorBill).where(VendorBill.vendor_id == contact.id)
+            .order_by(VendorBill.id.desc())
+        ).all()
+        purchase_summary = {
+            "bills": bills,
+            "total_purchases": round(sum(b.total for b in bills), 2),
+            "total_paid": round(sum(b.amount_paid for b in bills), 2),
+            "outstanding": round(sum(b.amount_due for b in bills), 2),
+            "overdue": round(sum(b.amount_due for b in bills if b.is_overdue), 2),
+        }
+
     return templates.TemplateResponse(request, "contacts/detail.html", {
         "request": request, "user": user, "active": "contacts", "contact": contact,
+        "sales_summary": sales_summary, "purchase_summary": purchase_summary,
     })
 
 

@@ -24,23 +24,44 @@ Balance Sheet, and P&L update live from the postings.
 
 ## 2. Features
 
-**Master Data** — Contacts (customer/vendor/both), Products (goods/service/
-combo), Chart of Accounts, Journals, Journal Entries (manual, double-entry
-validated), Analytic Accounts, Budgets.
+**Business Command Center dashboard** — a role-aware executive dashboard:
+KPI cards (Revenue/Expenses/Net Profit this month, with month-over-month
+trend, plus all-time totals; Cash+Bank; Receivables; Payables), a Business
+Pulse panel (Profitability/Cash Position/Collections/Budget Control, each
+a clearly-defined real ratio, not an arbitrary score), a Revenue-vs-Expense
+trend chart (last 6 months, plain inline SVG — no charting dependency), a
+dynamic Action Center (overdue invoices/bills, bills due soon, budgets near
+their limit, orders stuck in draft — generated from real data, shows
+"You're all caught up" when there's nothing to flag), and Quick Actions.
+Accountants see the same page with an operational focus (Pulse/chart
+hidden); Contact-role users get a separate "My Financial Portal" instead
+(their own invoice/bill counts and outstanding balance only).
 
-**Transactions** — Purchase Orders → Vendor Bills → Vendor Payments; Sales
-Orders (with tax) → Customer Invoices → Customer Payments.
+**Master Data** — Contacts (customer/vendor/both, with a 360° view showing
+total sales/purchases, paid, outstanding and overdue per contact), Products
+(goods/service/combo, with gross margin and sales/purchase activity),
+Chart of Accounts, Journals, Journal Entries (manual, double-entry
+validated, with an optional Partner per line), Analytic Accounts, Budgets
+(multi-line, Draft/Confirm/Revise/Cancel lifecycle, with visual progress
+bars per analytic-account line).
+
+**Transactions** — Purchase Orders → Confirm → Vendor Bills → Vendor
+Payments; Sales Orders (with tax) → Confirm → Customer Invoices → Customer
+Payments — both with status filter chips (Draft/Confirmed/.../Overdue) and
+a visual workflow-stage indicator on each order's detail page.
 
 **Accounting Engine** — every posted journal entry is validated so total
 debit == total credit before anything is written; account balances are
 always derived live from posted entries, never stored/cached.
 
 **Reports** — Balance Sheet (with as-of date), Profit & Loss (with date
-range), Budget Report (planned vs. actual vs. variance by analytic account)
-— all computed from the ledger, nothing hardcoded.
+range and Profit Margin), Budget Report (planned vs. actual vs. variance by
+analytic account) — all computed from the ledger with a "View Transactions"
+drill-down from any account row into the journal entries that produced it.
 
-**Roles** — a lightweight 3-role model (Admin, Accountant, Contact) via a
-simple demo login/role switcher — no OAuth/JWT, per the prototype's scope.
+**Roles** — a 3-role model (Admin, Accountant, Contact) with real Login
+ID/password authentication (see Security hardening below) — no OAuth/JWT,
+per the prototype's scope, but no faked/hardcoded auth either.
 
 ## 3. Architecture
 
@@ -147,14 +168,16 @@ Use "Sign Out" (top-right) to switch users during a demo.
 
 See **`docs/DEMO_SCRIPT.md`** for the full scripted walkthrough. In short:
 
-1. **Master data** — confirm Azure Furniture (vendor), Nimesh Pathak
+1. **Dashboard** — open the Business Command Center, point out the KPI
+   cards, Business Pulse, Revenue vs Expenses chart, and Action Center.
+2. **Master data** — confirm Azure Furniture (vendor), Nimesh Pathak
    (customer), and Office Chair (product) already exist (seeded).
-2. **Purchase**: Purchase Order (Azure Furniture, Office Chair) → Convert to
-   Vendor Bill → Register payment via Bank.
-3. **Sale**: Sales Order (Nimesh Pathak, 5 Office Chairs, with tax) →
-   Generate Customer Invoice → Register payment via Cash.
-4. **Reports**: open Balance Sheet, P&L, and Budget Report and see both
-   transactions reflected live.
+3. **Purchase**: Purchase Order (Azure Furniture, Office Chair) → Confirm →
+   Convert to Vendor Bill → Register payment via Bank.
+4. **Sale**: Sales Order (Nimesh Pathak, 5 Office Chairs, with tax) →
+   Confirm → Generate Customer Invoice → Register payment via Cash.
+5. **Reports**: open Balance Sheet, P&L (drill down "View Transactions" on
+   any row), and Budget Report and see both transactions reflected live.
 
 ## 9. Seed Data
 

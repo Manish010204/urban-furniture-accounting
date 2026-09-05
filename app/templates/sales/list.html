@@ -8,6 +8,13 @@
     <a class="btn primary" href="/sales/new">+ New Sales Order</a>
   </div>
   <div class="panel-body">
+    <div class="status-chip-row">
+      <a class="status-chip {{ 'active' if not so_status }}" href="/sales">All</a>
+      <a class="status-chip {{ 'active' if so_status=='draft' }}" href="/sales?so_status=draft">Draft</a>
+      <a class="status-chip {{ 'active' if so_status=='confirmed' }}" href="/sales?so_status=confirmed">Confirmed</a>
+      <a class="status-chip {{ 'active' if so_status=='invoiced' }}" href="/sales?so_status=invoiced">Invoiced</a>
+      <a class="status-chip {{ 'active' if so_status=='cancelled' }}" href="/sales?so_status=cancelled">Cancelled</a>
+    </div>
     {% if orders %}
     <table>
       <thead><tr><th>#</th><th>Customer</th><th>Date</th><th>Total</th><th>Status</th><th></th></tr></thead>
@@ -31,7 +38,7 @@
       </tbody>
     </table>
     {% else %}
-      <div class="empty-state"><div class="icon">🛒</div>No sales orders yet. Create one to get started.</div>
+      <div class="empty-state"><div class="icon">🛒</div>No sales orders match this filter.</div>
     {% endif %}
   </div>
 </div>
@@ -39,6 +46,13 @@
 <div class="panel" id="invoices">
   <div class="panel-header"><h2>Customer Invoices</h2></div>
   <div class="panel-body">
+    <div class="status-chip-row">
+      <a class="status-chip {{ 'active' if not inv_status }}" href="/sales#invoices">All</a>
+      <a class="status-chip {{ 'active' if inv_status=='unpaid' }}" href="/sales?inv_status=unpaid#invoices">Not Paid</a>
+      <a class="status-chip {{ 'active' if inv_status=='partially_paid' }}" href="/sales?inv_status=partially_paid#invoices">Partially Paid</a>
+      <a class="status-chip {{ 'active' if inv_status=='paid' }}" href="/sales?inv_status=paid#invoices">Paid</a>
+      <a class="status-chip {{ 'active' if inv_status=='overdue' }}" href="/sales?inv_status=overdue#invoices">Overdue</a>
+    </div>
     {% if invoices %}
     <table>
       <thead><tr><th>#</th><th>Customer</th><th>Invoice Date</th><th>Due Date</th><th>Total</th><th>Due</th><th>Status</th><th></th></tr></thead>
@@ -53,6 +67,7 @@
           <td class="num">₹{{ "%.2f"|format(inv.amount_due) }}</td>
           <td>
             {% if inv.status.value == 'paid' %}<span class="badge green">Paid</span>
+            {% elif inv.is_overdue %}<span class="badge red">Overdue</span>
             {% elif inv.status.value == 'partially_paid' %}<span class="badge amber">Partially Paid</span>
             {% else %}<span class="badge gray">Not Paid</span>{% endif %}
           </td>
@@ -64,7 +79,7 @@
       </tbody>
     </table>
     {% else %}
-      <div class="empty-state"><div class="icon">🧾</div>No customer invoices yet.</div>
+      <div class="empty-state"><div class="icon">🧾</div>No customer invoices match this filter.</div>
     {% endif %}
   </div>
 </div>
