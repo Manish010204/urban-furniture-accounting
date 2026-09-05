@@ -57,7 +57,9 @@ always derived live from posted entries, never stored/cached.
 **Reports** — Balance Sheet (with as-of date), Profit & Loss (with date
 range and Profit Margin), Budget Report (planned vs. actual vs. variance by
 analytic account) — all computed from the ledger with a "View Transactions"
-drill-down from any account row into the journal entries that produced it.
+drill-down from any account row into the journal entries that produced it,
+and a Print button on every report (a `@media print` stylesheet hides the
+nav/filters/links and shows a clean report header instead).
 
 **Roles** — a 3-role model (Admin, Accountant, Contact) with real Login
 ID/password authentication (see Security hardening below) — no OAuth/JWT,
@@ -67,6 +69,8 @@ per the prototype's scope, but no faked/hardcoded auth either.
 
 - **Backend**: Python 3.13, FastAPI, Uvicorn.
 - **Database**: SQLite (`data/app.db`), created automatically on first run.
+  All monetary and quantity columns are `Numeric(12, 2)` (Python `Decimal`),
+  not `float` — no floating-point rounding drift in totals or balances.
 - **ORM**: SQLAlchemy 2.0 (declarative models, one `Session` per request).
 - **Frontend**: server-rendered Jinja2 templates, plain CSS design system,
   small vanilla-JS snippets for dynamic form rows and live totals — no SPA

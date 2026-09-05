@@ -10,9 +10,16 @@
     <input type="date" name="as_of" value="{{ as_of }}">
     <button class="btn small" type="submit">Update</button>
   </form>
+  <button class="btn small" type="button" onclick="window.print()">🖨 Print</button>
 </div>
 <div class="panel" style="max-width:720px;">
   <div class="panel-body">
+    <div class="print-header">
+      <h1>Urban Furniture — Profit &amp; Loss</h1>
+      <div class="print-meta">
+        Period: {{ since or "Inception" }} to {{ as_of or "Today" }} · Generated {{ generated_at }}
+      </div>
+    </div>
     <p class="help-text" style="margin-top:0;">Income</p>
     {% for row in data.income %}
     <div class="kv"><span class="k">{{ row.account.name }}</span>

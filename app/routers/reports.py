@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
@@ -26,6 +26,7 @@ def balance_sheet_report(request: Request, as_of: str = "", user: User = Depends
     data = reports_service.balance_sheet(db, as_of=as_of_date)
     return templates.TemplateResponse(request, "reports/balance_sheet.html", {
         "request": request, "user": user, "active": "reports", "data": data, "as_of": as_of_date.isoformat(),
+        "generated_at": datetime.now().strftime("%d %b %Y, %I:%M %p"),
     })
 
 
@@ -38,6 +39,7 @@ def profit_loss_report(request: Request, since: str = "", as_of: str = "",
     return templates.TemplateResponse(request, "reports/profit_loss.html", {
         "request": request, "user": user, "active": "reports", "data": data,
         "since": since_date.isoformat() if since_date else "", "as_of": as_of_date.isoformat(),
+        "generated_at": datetime.now().strftime("%d %b %Y, %I:%M %p"),
     })
 
 
@@ -47,4 +49,5 @@ def budget_report_page(request: Request, user: User = Depends(require_role("admi
     rows = reports_service.budget_report(db)
     return templates.TemplateResponse(request, "reports/budget.html", {
         "request": request, "user": user, "active": "reports", "rows": rows,
+        "generated_at": datetime.now().strftime("%d %b %Y, %I:%M %p"),
     })

@@ -1,4 +1,5 @@
 from datetime import date, timedelta
+from decimal import Decimal
 from itertools import zip_longest
 
 from fastapi import APIRouter, Depends, Form, Request
@@ -105,7 +106,7 @@ async def create_so(request: Request, user: User = Depends(require_role("admin",
     for pid, qty, price, tax, analytic_id in zip_longest(product_ids, qtys, prices, taxes, analytic_ids, fillvalue=""):
         if not pid:
             continue
-        qty_f, price_f, tax_f = float(qty or 0), float(price or 0), float(tax or 0)
+        qty_f, price_f, tax_f = Decimal(qty or "0"), Decimal(price or "0"), Decimal(tax or "0")
         if qty_f <= 0:
             return render_error("Quantity must be greater than zero for every line.")
         if price_f < 0:
@@ -245,7 +246,7 @@ def pay_invoice_form(invoice_id: int, request: Request,
 
 
 @router.post("/invoices/{invoice_id}/pay")
-def pay_invoice(invoice_id: int, request: Request, amount: float = Form(...), method: str = Form(...),
+def pay_invoice(invoice_id: int, request: Request, amount: Decimal = Form(...), method: str = Form(...),
                 note: str = Form(""), user: User = Depends(require_role("admin", "accountant", "contact")),
                 db: Session = Depends(get_db)):
     invoice = db.get(CustomerInvoice, invoice_id)
@@ -264,7 +265,7 @@ def pay_invoice(invoice_id: int, request: Request, amount: float = Form(...), me
         return render_error("This invoice is already fully paid.")
     if amount <= 0:
         return render_error("Payment amount must be greater than zero.")
-    if amount > invoice.amount_due + 0.01:
+    if amount > invoice.amount_due + Decimal("0.01"):
         return render_error(f"Payment cannot exceed the outstanding amount of ₹{invoice.amount_due:.2f}.")
 
     payment = Payment(
@@ -285,9 +286,9 @@ def pay_invoice(invoice_id: int, request: Request, amount: float = Form(...), me
 
 
 def _invoice_status_after_payment(db: Session, invoice: CustomerInvoice):
-    total_paid = db.scalar(select(func.sum(Payment.amount)).where(Payment.customer_invoice_id == invoice.id)) or 0
+    total_paid = db.scalar(select(func.sum(Payment.amount)).where(Payment.customer_invoice_id == invoice.id)) or Decimal("0")
     amount_due = round(invoice.total - total_paid, 2)
-    if amount_due <= 0.01:
+    if amount_due <= Decimal("0.01"):
         return InvoiceStatus.paid
     if total_paid > 0:
         return InvoiceStatus.partially_paid

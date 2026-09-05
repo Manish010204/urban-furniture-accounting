@@ -1,13 +1,14 @@
 import enum
 from datetime import date as date_type, datetime, timezone
+from decimal import Decimal
 
 from sqlalchemy import (
     Date,
     DateTime,
     Enum,
-    Float,
     ForeignKey,
     Integer,
+    Numeric,
     String,
     Text,
 )
@@ -150,8 +151,8 @@ class Product(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String(150))
     type: Mapped[ProductType] = mapped_column(Enum(ProductType))
-    sales_price: Mapped[float] = mapped_column(Float, default=0)
-    cost_price: Mapped[float] = mapped_column(Float, default=0)
+    sales_price: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=0)
+    cost_price: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=0)
     category: Mapped[str | None] = mapped_column(String(100), nullable=True)
     image_path: Mapped[str | None] = mapped_column(String(255), nullable=True)
     is_archived: Mapped[bool] = mapped_column(default=False)
@@ -194,11 +195,11 @@ class JournalEntry(Base):
     lines: Mapped[list["JournalEntryLine"]] = relationship(back_populates="entry", cascade="all, delete-orphan")
 
     @property
-    def total_debit(self) -> float:
+    def total_debit(self) -> Decimal:
         return round(sum(l.debit for l in self.lines), 2)
 
     @property
-    def total_credit(self) -> float:
+    def total_credit(self) -> Decimal:
         return round(sum(l.credit for l in self.lines), 2)
 
     @property
@@ -215,8 +216,8 @@ class JournalEntryLine(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     entry_id: Mapped[int] = mapped_column(ForeignKey("journal_entries.id"))
     account_id: Mapped[int] = mapped_column(ForeignKey("accounts.id"))
-    debit: Mapped[float] = mapped_column(Float, default=0)
-    credit: Mapped[float] = mapped_column(Float, default=0)
+    debit: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=0)
+    credit: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=0)
     analytic_account_id: Mapped[int | None] = mapped_column(ForeignKey("analytic_accounts.id"), nullable=True)
     partner_contact_id: Mapped[int | None] = mapped_column(ForeignKey("contacts.id"), nullable=True)
 
@@ -255,7 +256,7 @@ class Budget(Base):
     lines: Mapped[list["BudgetLine"]] = relationship(back_populates="budget", cascade="all, delete-orphan")
 
     @property
-    def planned_amount(self) -> float:
+    def planned_amount(self) -> Decimal:
         return round(sum(l.committed_amount for l in self.lines), 2)
 
 
@@ -265,7 +266,7 @@ class BudgetLine(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     budget_id: Mapped[int] = mapped_column(ForeignKey("budgets.id"))
     analytic_account_id: Mapped[int] = mapped_column(ForeignKey("analytic_accounts.id"))
-    committed_amount: Mapped[float] = mapped_column(Float, default=0)
+    committed_amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=0)
 
     budget: Mapped["Budget"] = relationship(back_populates="lines")
     analytic_account: Mapped["AnalyticAccount"] = relationship()
@@ -296,7 +297,7 @@ class PurchaseOrder(Base):
         return f"P{self.id:05d}"
 
     @property
-    def total(self) -> float:
+    def total(self) -> Decimal:
         return round(sum(l.qty * l.unit_price for l in self.lines), 2)
 
 
@@ -306,8 +307,8 @@ class PurchaseOrderLine(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     po_id: Mapped[int] = mapped_column(ForeignKey("purchase_orders.id"))
     product_id: Mapped[int] = mapped_column(ForeignKey("products.id"))
-    qty: Mapped[float] = mapped_column(Float, default=1)
-    unit_price: Mapped[float] = mapped_column(Float, default=0)
+    qty: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=1)
+    unit_price: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=0)
     analytic_account_id: Mapped[int | None] = mapped_column(ForeignKey("analytic_accounts.id"), nullable=True)
 
     po: Mapped["PurchaseOrder"] = relationship(back_populates="lines")
@@ -315,7 +316,7 @@ class PurchaseOrderLine(Base):
     analytic_account: Mapped["AnalyticAccount | None"] = relationship()
 
     @property
-    def total(self) -> float:
+    def total(self) -> Decimal:
         return round(self.qty * self.unit_price, 2)
 
 
@@ -342,15 +343,15 @@ class VendorBill(Base):
         return f"Bill/{self.invoice_date.year}/{self.id:04d}"
 
     @property
-    def total(self) -> float:
+    def total(self) -> Decimal:
         return round(sum(l.total for l in self.lines), 2)
 
     @property
-    def amount_paid(self) -> float:
+    def amount_paid(self) -> Decimal:
         return round(sum(p.amount for p in self.payments), 2)
 
     @property
-    def amount_due(self) -> float:
+    def amount_due(self) -> Decimal:
         return round(self.total - self.amount_paid, 2)
 
     @property
@@ -366,8 +367,8 @@ class VendorBillLine(Base):
     product_id: Mapped[int] = mapped_column(ForeignKey("products.id"))
     account_id: Mapped[int | None] = mapped_column(ForeignKey("accounts.id"), nullable=True)
     analytic_account_id: Mapped[int | None] = mapped_column(ForeignKey("analytic_accounts.id"), nullable=True)
-    qty: Mapped[float] = mapped_column(Float, default=1)
-    unit_price: Mapped[float] = mapped_column(Float, default=0)
+    qty: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=1)
+    unit_price: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=0)
 
     bill: Mapped["VendorBill"] = relationship(back_populates="lines")
     product: Mapped["Product"] = relationship()
@@ -375,7 +376,7 @@ class VendorBillLine(Base):
     analytic_account: Mapped["AnalyticAccount | None"] = relationship()
 
     @property
-    def total(self) -> float:
+    def total(self) -> Decimal:
         return round(self.qty * self.unit_price, 2)
 
 
@@ -400,15 +401,15 @@ class SalesOrder(Base):
         return f"S{self.id:05d}"
 
     @property
-    def subtotal(self) -> float:
+    def subtotal(self) -> Decimal:
         return round(sum(l.qty * l.unit_price for l in self.lines), 2)
 
     @property
-    def tax_amount(self) -> float:
+    def tax_amount(self) -> Decimal:
         return round(sum(l.qty * l.unit_price * l.tax_percent / 100 for l in self.lines), 2)
 
     @property
-    def total(self) -> float:
+    def total(self) -> Decimal:
         return round(self.subtotal + self.tax_amount, 2)
 
 
@@ -418,9 +419,9 @@ class SalesOrderLine(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     so_id: Mapped[int] = mapped_column(ForeignKey("sales_orders.id"))
     product_id: Mapped[int] = mapped_column(ForeignKey("products.id"))
-    qty: Mapped[float] = mapped_column(Float, default=1)
-    unit_price: Mapped[float] = mapped_column(Float, default=0)
-    tax_percent: Mapped[float] = mapped_column(Float, default=0)
+    qty: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=1)
+    unit_price: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=0)
+    tax_percent: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=0)
     analytic_account_id: Mapped[int | None] = mapped_column(ForeignKey("analytic_accounts.id"), nullable=True)
 
     so: Mapped["SalesOrder"] = relationship(back_populates="lines")
@@ -428,15 +429,15 @@ class SalesOrderLine(Base):
     analytic_account: Mapped["AnalyticAccount | None"] = relationship()
 
     @property
-    def subtotal(self) -> float:
+    def subtotal(self) -> Decimal:
         return round(self.qty * self.unit_price, 2)
 
     @property
-    def tax_amount(self) -> float:
+    def tax_amount(self) -> Decimal:
         return round(self.subtotal * self.tax_percent / 100, 2)
 
     @property
-    def total(self) -> float:
+    def total(self) -> Decimal:
         return round(self.subtotal + self.tax_amount, 2)
 
 
@@ -463,23 +464,23 @@ class CustomerInvoice(Base):
         return f"INV/{self.invoice_date.year}/{self.id:04d}"
 
     @property
-    def subtotal(self) -> float:
+    def subtotal(self) -> Decimal:
         return round(sum(l.subtotal for l in self.lines), 2)
 
     @property
-    def tax_amount(self) -> float:
+    def tax_amount(self) -> Decimal:
         return round(sum(l.tax_amount for l in self.lines), 2)
 
     @property
-    def total(self) -> float:
+    def total(self) -> Decimal:
         return round(self.subtotal + self.tax_amount, 2)
 
     @property
-    def amount_paid(self) -> float:
+    def amount_paid(self) -> Decimal:
         return round(sum(p.amount for p in self.payments), 2)
 
     @property
-    def amount_due(self) -> float:
+    def amount_due(self) -> Decimal:
         return round(self.total - self.amount_paid, 2)
 
     @property
@@ -495,9 +496,9 @@ class CustomerInvoiceLine(Base):
     product_id: Mapped[int] = mapped_column(ForeignKey("products.id"))
     account_id: Mapped[int | None] = mapped_column(ForeignKey("accounts.id"), nullable=True)
     analytic_account_id: Mapped[int | None] = mapped_column(ForeignKey("analytic_accounts.id"), nullable=True)
-    qty: Mapped[float] = mapped_column(Float, default=1)
-    unit_price: Mapped[float] = mapped_column(Float, default=0)
-    tax_percent: Mapped[float] = mapped_column(Float, default=0)
+    qty: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=1)
+    unit_price: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=0)
+    tax_percent: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=0)
 
     invoice: Mapped["CustomerInvoice"] = relationship(back_populates="lines")
     product: Mapped["Product"] = relationship()
@@ -505,15 +506,15 @@ class CustomerInvoiceLine(Base):
     analytic_account: Mapped["AnalyticAccount | None"] = relationship()
 
     @property
-    def subtotal(self) -> float:
+    def subtotal(self) -> Decimal:
         return round(self.qty * self.unit_price, 2)
 
     @property
-    def tax_amount(self) -> float:
+    def tax_amount(self) -> Decimal:
         return round(self.subtotal * self.tax_percent / 100, 2)
 
     @property
-    def total(self) -> float:
+    def total(self) -> Decimal:
         return round(self.subtotal + self.tax_amount, 2)
 
 
@@ -524,7 +525,7 @@ class Payment(Base):
     direction: Mapped[PaymentDirection] = mapped_column(Enum(PaymentDirection))
     party_contact_id: Mapped[int] = mapped_column(ForeignKey("contacts.id"))
     method: Mapped[PaymentMethod] = mapped_column(Enum(PaymentMethod))
-    amount: Mapped[float] = mapped_column(Float)
+    amount: Mapped[Decimal] = mapped_column(Numeric(12, 2))
     date: Mapped[date_type] = mapped_column(Date, default=date_type.today)
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
     vendor_bill_id: Mapped[int | None] = mapped_column(ForeignKey("vendor_bills.id"), nullable=True)

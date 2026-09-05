@@ -2,8 +2,15 @@
 {% block title %}Budget Report{% endblock %}
 {% block heading %}Budget Report{% endblock %}
 {% block content %}
+<div class="toolbar">
+  <button class="btn small" type="button" onclick="window.print()">🖨 Print</button>
+</div>
 <div class="panel">
   <div class="panel-body">
+    <div class="print-header">
+      <h1>Urban Furniture — Budget Report</h1>
+      <div class="print-meta">Generated {{ generated_at }}</div>
+    </div>
     {% if rows %}
     <table>
       <thead><tr><th>Budget</th><th>Period</th><th>Responsible</th><th>Status</th><th>Analytic Account</th><th>Committed</th><th>Achieved</th><th>Amount to Achieve</th></tr></thead>

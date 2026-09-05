@@ -1,4 +1,5 @@
 from datetime import date
+from decimal import Decimal
 
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import RedirectResponse
@@ -68,7 +69,7 @@ async def create_budget(request: Request, user: User = Depends(require_role("adm
         for aid, amount in zip(analytic_account_ids, committed_amounts):
             if not aid:
                 continue
-            amount_f = float(amount or 0)
+            amount_f = Decimal(amount or "0")
             if amount_f < 0:
                 raise ValidationError("Committed amount cannot be negative.")
             lines.append(BudgetLine(analytic_account_id=int(aid), committed_amount=amount_f))
@@ -158,7 +159,7 @@ async def revise_budget(budget_id: int, request: Request, user: User = Depends(r
         for line_id, amount in zip(line_ids, committed_amounts):
             if int(line_id) == original_line.id:
                 new_lines.append(BudgetLine(analytic_account_id=original_line.analytic_account_id,
-                                             committed_amount=float(amount or 0)))
+                                             committed_amount=Decimal(amount or "0")))
                 break
 
     revised_budget = Budget(

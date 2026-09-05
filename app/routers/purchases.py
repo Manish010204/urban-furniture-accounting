@@ -1,4 +1,5 @@
 from datetime import date, timedelta
+from decimal import Decimal
 from itertools import zip_longest
 
 from fastapi import APIRouter, Depends, Form, Request
@@ -107,7 +108,7 @@ async def create_po(request: Request, user: User = Depends(require_role("admin",
     for pid, qty, price, analytic_id in zip_longest(product_ids, qtys, prices, analytic_ids, fillvalue=""):
         if not pid:
             continue
-        qty_f, price_f = float(qty or 0), float(price or 0)
+        qty_f, price_f = Decimal(qty or "0"), Decimal(price or "0")
         if qty_f <= 0:
             return render_error("Quantity must be greater than zero for every line.")
         if price_f < 0:
@@ -263,7 +264,7 @@ def pay_bill_form(bill_id: int, request: Request,
 
 
 @router.post("/bills/{bill_id}/pay")
-def pay_bill(bill_id: int, request: Request, amount: float = Form(...), method: str = Form(...),
+def pay_bill(bill_id: int, request: Request, amount: Decimal = Form(...), method: str = Form(...),
              note: str = Form(""), user: User = Depends(require_role("admin", "accountant", "contact")),
              db: Session = Depends(get_db)):
     bill = db.get(VendorBill, bill_id)
@@ -282,7 +283,7 @@ def pay_bill(bill_id: int, request: Request, amount: float = Form(...), method: 
         return render_error("This bill is already fully paid.")
     if amount <= 0:
         return render_error("Payment amount must be greater than zero.")
-    if amount > bill.amount_due + 0.01:
+    if amount > bill.amount_due + Decimal("0.01"):
         return render_error(f"Payment cannot exceed the outstanding amount of ₹{bill.amount_due:.2f}.")
 
     payment = Payment(
@@ -304,9 +305,9 @@ def pay_bill(bill_id: int, request: Request, amount: float = Form(...), method: 
 
 def _bill_status_after_payment(db: Session, bill: VendorBill):
     from app.models import BillStatus
-    total_paid = db.scalar(select(func.sum(Payment.amount)).where(Payment.vendor_bill_id == bill.id)) or 0
+    total_paid = db.scalar(select(func.sum(Payment.amount)).where(Payment.vendor_bill_id == bill.id)) or Decimal("0")
     amount_due = round(bill.total - total_paid, 2)
-    if amount_due <= 0.01:
+    if amount_due <= Decimal("0.01"):
         return BillStatus.paid
     if total_paid > 0:
         return BillStatus.partially_paid

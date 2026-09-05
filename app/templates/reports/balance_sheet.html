@@ -8,6 +8,11 @@
     <input type="date" name="as_of" value="{{ as_of }}">
     <button class="btn small" type="submit">Update</button>
   </form>
+  <button class="btn small" type="button" onclick="window.print()">🖨 Print</button>
+</div>
+<div class="print-header">
+  <h1>Urban Furniture — Balance Sheet</h1>
+  <div class="print-meta">As of {{ as_of or "Today" }} · Generated {{ generated_at }}</div>
 </div>
 <div class="grid-2">
   <div class="panel">

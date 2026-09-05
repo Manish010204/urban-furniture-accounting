@@ -1,4 +1,5 @@
 from datetime import date
+from decimal import Decimal
 from itertools import zip_longest
 
 from fastapi import APIRouter, Depends, Request
@@ -62,7 +63,7 @@ async def create_entry(request: Request, user: User = Depends(require_role("admi
             continue
         account = db.get(Account, int(acc_id))
         lines.append({
-            "account": account, "debit": float(debit or 0), "credit": float(credit or 0),
+            "account": account, "debit": Decimal(debit or "0"), "credit": Decimal(credit or "0"),
             "partner_contact_id": int(partner_id) if partner_id else None,
         })
 

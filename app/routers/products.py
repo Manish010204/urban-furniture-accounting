@@ -1,4 +1,5 @@
 import os
+from decimal import Decimal
 
 from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
 from fastapi.responses import RedirectResponse
@@ -58,8 +59,8 @@ def create_product(
     request: Request,
     name: str = Form(...),
     type: str = Form(...),
-    sales_price: float = Form(...),
-    cost_price: float = Form(...),
+    sales_price: Decimal = Form(...),
+    cost_price: Decimal = Form(...),
     category: str = Form(""),
     image: UploadFile | None = File(None),
     user: User = Depends(require_role("admin", "accountant")),
@@ -132,8 +133,8 @@ def update_product(
     request: Request,
     name: str = Form(...),
     type: str = Form(...),
-    sales_price: float = Form(...),
-    cost_price: float = Form(...),
+    sales_price: Decimal = Form(...),
+    cost_price: Decimal = Form(...),
     category: str = Form(""),
     image: UploadFile | None = File(None),
     user: User = Depends(require_role("admin")),
