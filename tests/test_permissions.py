@@ -195,4 +195,5 @@ def test_contact_user_cannot_see_another_customers_invoice(client):
     assert redirected_away_from(r, f"/sales/invoices/{invoice_id}/pay")
 
     r = client.get("/")
-    assert f"INV" not in r.text or str(invoice_id) not in r.text
+    assert f"/sales/invoices/{invoice_id}\"" not in r.text
+    assert f"INV/2026/{invoice_id:04d}" not in r.text
