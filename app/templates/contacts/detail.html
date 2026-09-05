@@ -25,6 +25,7 @@
       <div class="kv"><span class="k">Mobile</span><span class="v">{{ contact.mobile or '—' }}</span></div>
       <div class="kv"><span class="k">City</span><span class="v">{{ contact.city or '—' }}</span></div>
       <div class="kv"><span class="k">State</span><span class="v">{{ contact.state or '—' }}</span></div>
+      <div class="kv"><span class="k">Country</span><span class="v">{{ contact.country or '—' }}</span></div>
       <div class="kv"><span class="k">Pincode</span><span class="v">{{ contact.pincode or '—' }}</span></div>
       <div class="kv"><span class="k">Status</span><span class="v">
         {% if contact.is_archived %}<span class="badge red">Archived</span>{% else %}<span class="badge green">Active</span>{% endif %}

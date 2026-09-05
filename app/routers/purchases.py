@@ -1,4 +1,5 @@
 from datetime import date, timedelta
+from itertools import zip_longest
 
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import RedirectResponse
@@ -22,8 +23,10 @@ from app.models import (
     PurchaseOrderLine,
     User,
     VendorBill,
+    VendorBillLine,
 )
-from app.services.accounting import get_journal, post_vendor_bill, post_vendor_payment
+from app.services import reports as reports_service
+from app.services.accounting import ACCOUNT_PURCHASES_EXPENSE, get_account, get_journal, post_vendor_bill, post_vendor_payment
 from app.templating import templates
 from app.validators import ValidationError
 
@@ -41,6 +44,10 @@ def _products(db: Session):
     return db.scalars(select(Product).where(Product.is_archived == False).order_by(Product.name)).all()  # noqa: E712
 
 
+def _analytic_accounts(db: Session):
+    return db.scalars(select(AnalyticAccount).where(AnalyticAccount.type == "expense").order_by(AnalyticAccount.name)).all()
+
+
 @router.get("")
 def list_purchase_orders(request: Request, user: User = Depends(require_role("admin", "accountant")),
                           db: Session = Depends(get_db)):
@@ -54,10 +61,9 @@ def list_purchase_orders(request: Request, user: User = Depends(require_role("ad
 @router.get("/new")
 def new_po_form(request: Request, vendor_id: int = None, user: User = Depends(require_role("admin", "accountant")),
                 db: Session = Depends(get_db)):
-    analytic_accounts = db.scalars(select(AnalyticAccount).where(AnalyticAccount.type == "expense")).all()
     return templates.TemplateResponse("purchases/form.html", {
         "request": request, "user": user, "active": "purchases",
-        "vendors": _vendors(db), "products": _products(db), "analytic_accounts": analytic_accounts,
+        "vendors": _vendors(db), "products": _products(db), "analytic_accounts": _analytic_accounts(db),
         "today": date.today().isoformat(), "selected_vendor_id": vendor_id,
     })
 
@@ -68,16 +74,15 @@ async def create_po(request: Request, user: User = Depends(require_role("admin",
     form = await request.form()
     vendor_id = int(form["vendor_id"])
     po_date = date.fromisoformat(form["date"])
-    analytic_account_id = form.get("analytic_account_id") or None
     product_ids = form.getlist("product_id")
     qtys = form.getlist("qty")
     prices = form.getlist("unit_price")
+    analytic_ids = form.getlist("analytic_account_id")
 
     def render_error(message):
-        analytic_accounts = db.scalars(select(AnalyticAccount).where(AnalyticAccount.type == "expense")).all()
         return templates.TemplateResponse("purchases/form.html", {
             "request": request, "user": user, "active": "purchases",
-            "vendors": _vendors(db), "products": _products(db), "analytic_accounts": analytic_accounts,
+            "vendors": _vendors(db), "products": _products(db), "analytic_accounts": _analytic_accounts(db),
             "today": po_date.isoformat(), "error": message,
         }, status_code=400)
 
@@ -86,7 +91,7 @@ async def create_po(request: Request, user: User = Depends(require_role("admin",
         return render_error("Please select an active vendor.")
 
     lines = []
-    for pid, qty, price in zip(product_ids, qtys, prices):
+    for pid, qty, price, analytic_id in zip_longest(product_ids, qtys, prices, analytic_ids, fillvalue=""):
         if not pid:
             continue
         qty_f, price_f = float(qty or 0), float(price or 0)
@@ -97,13 +102,15 @@ async def create_po(request: Request, user: User = Depends(require_role("admin",
         product = db.get(Product, int(pid))
         if not product or product.is_archived:
             return render_error("One of the selected products is archived or invalid.")
-        lines.append(PurchaseOrderLine(product_id=product.id, qty=qty_f, unit_price=price_f))
+        lines.append(PurchaseOrderLine(
+            product_id=product.id, qty=qty_f, unit_price=price_f,
+            analytic_account_id=int(analytic_id) if analytic_id else None,
+        ))
 
     if not lines:
         return render_error("Add at least one product line.")
 
-    po = PurchaseOrder(vendor_id=vendor.id, date=po_date, status=POStatus.draft,
-                        analytic_account_id=int(analytic_account_id) if analytic_account_id else None)
+    po = PurchaseOrder(vendor_id=vendor.id, date=po_date, status=POStatus.draft)
     po.lines = lines
     db.add(po)
     db.commit()
@@ -121,6 +128,49 @@ def po_detail(po_id: int, request: Request, user: User = Depends(require_role("a
     })
 
 
+@router.post("/{po_id}/confirm")
+def confirm_po(po_id: int, request: Request, user: User = Depends(require_role("admin", "accountant")),
+               db: Session = Depends(get_db)):
+    po = db.get(PurchaseOrder, po_id)
+    if not po:
+        return RedirectResponse(url="/purchases?error=Purchase+order+not+found", status_code=303)
+    if po.status != POStatus.draft:
+        return RedirectResponse(url=f"/purchases/{po.id}?error=Only+draft+orders+can+be+confirmed", status_code=303)
+
+    warnings = []
+    for line in po.lines:
+        if not line.analytic_account_id:
+            continue
+        result = reports_service.remaining_budget_for_analytic(db, line.analytic_account_id, po.date)
+        if result is None:
+            continue
+        budget, remaining = result
+        if line.total > remaining:
+            warnings.append(
+                f"Line for {line.product.name} (₹{line.total:.2f}) exceeds the remaining budget "
+                f"(₹{remaining:.2f}) for '{budget.name}'."
+            )
+
+    po.status = POStatus.confirmed
+    db.commit()
+    if warnings:
+        message = "Purchase+order+confirmed.+Warning:+" + "+".join(w.replace(" ", "+") for w in warnings)
+        return RedirectResponse(url=f"/purchases/{po.id}?error={message}", status_code=303)
+    return RedirectResponse(url=f"/purchases/{po.id}?success=Purchase+order+confirmed", status_code=303)
+
+
+@router.post("/{po_id}/cancel")
+def cancel_po(po_id: int, user: User = Depends(require_role("admin", "accountant")), db: Session = Depends(get_db)):
+    po = db.get(PurchaseOrder, po_id)
+    if not po:
+        return RedirectResponse(url="/purchases?error=Purchase+order+not+found", status_code=303)
+    if po.status not in (POStatus.draft, POStatus.confirmed):
+        return RedirectResponse(url=f"/purchases/{po.id}?error=This+order+cannot+be+cancelled", status_code=303)
+    po.status = POStatus.cancelled
+    db.commit()
+    return RedirectResponse(url=f"/purchases/{po.id}?success=Purchase+order+cancelled", status_code=303)
+
+
 @router.get("/{po_id}/convert")
 def convert_po_form(po_id: int, request: Request, user: User = Depends(require_role("admin", "accountant")),
                      db: Session = Depends(get_db)):
@@ -129,6 +179,8 @@ def convert_po_form(po_id: int, request: Request, user: User = Depends(require_r
         return RedirectResponse(url="/purchases?error=Purchase+order+not+found", status_code=303)
     if po.bill:
         return RedirectResponse(url=f"/purchases/{po.id}?error=This+purchase+order+already+has+a+vendor+bill", status_code=303)
+    if po.status != POStatus.confirmed:
+        return RedirectResponse(url=f"/purchases/{po.id}?error=Confirm+the+order+before+creating+a+bill", status_code=303)
     today = date.today()
     return templates.TemplateResponse("purchases/convert.html", {
         "request": request, "user": user, "active": "purchases", "po": po,
@@ -138,18 +190,26 @@ def convert_po_form(po_id: int, request: Request, user: User = Depends(require_r
 
 @router.post("/{po_id}/convert")
 def convert_po(po_id: int, request: Request, invoice_date: str = Form(...), due_date: str = Form(...),
-               user: User = Depends(require_role("admin", "accountant")), db: Session = Depends(get_db)):
+               reference: str = Form(""), user: User = Depends(require_role("admin", "accountant")),
+               db: Session = Depends(get_db)):
     po = db.get(PurchaseOrder, po_id)
     if not po:
         return RedirectResponse(url="/purchases?error=Purchase+order+not+found", status_code=303)
     if po.bill:
         return RedirectResponse(url=f"/purchases/{po.id}?error=This+purchase+order+already+has+a+vendor+bill", status_code=303)
+    if po.status != POStatus.confirmed:
+        return RedirectResponse(url=f"/purchases/{po.id}?error=Confirm+the+order+before+creating+a+bill", status_code=303)
 
+    purchases_expense = get_account(db, ACCOUNT_PURCHASES_EXPENSE)
     bill = VendorBill(
-        purchase_order_id=po.id, vendor_id=po.vendor_id,
+        purchase_order_id=po.id, vendor_id=po.vendor_id, reference=reference or None,
         invoice_date=date.fromisoformat(invoice_date), due_date=date.fromisoformat(due_date),
-        total=po.total,
     )
+    bill.lines = [
+        VendorBillLine(product_id=l.product_id, account_id=purchases_expense.id,
+                        analytic_account_id=l.analytic_account_id, qty=l.qty, unit_price=l.unit_price)
+        for l in po.lines
+    ]
     db.add(bill)
     db.flush()
 
@@ -191,7 +251,8 @@ def pay_bill_form(bill_id: int, request: Request,
 
 @router.post("/bills/{bill_id}/pay")
 def pay_bill(bill_id: int, request: Request, amount: float = Form(...), method: str = Form(...),
-             user: User = Depends(require_role("admin", "accountant", "contact")), db: Session = Depends(get_db)):
+             note: str = Form(""), user: User = Depends(require_role("admin", "accountant", "contact")),
+             db: Session = Depends(get_db)):
     bill = db.get(VendorBill, bill_id)
     if not bill:
         return RedirectResponse(url="/purchases?error=Vendor+bill+not+found", status_code=303)
@@ -213,7 +274,7 @@ def pay_bill(bill_id: int, request: Request, amount: float = Form(...), method: 
 
     payment = Payment(
         direction=PaymentDirection.outbound, party_contact_id=bill.vendor_id,
-        method=PaymentMethod(method), amount=amount, vendor_bill_id=bill.id,
+        method=PaymentMethod(method), amount=amount, vendor_bill_id=bill.id, note=note or None,
     )
     db.add(payment)
     db.flush()

@@ -10,19 +10,27 @@
   <div class="panel-body">
     {% if rows %}
     <table>
-      <thead><tr><th>Budget</th><th>Period</th><th>Responsible</th><th>Analytic Account</th><th>Planned</th><th>Actual</th><th>Variance</th></tr></thead>
+      <thead><tr><th>Budget</th><th>Period</th><th>Responsible</th><th>Status</th><th>Committed</th><th>Achieved</th><th>Amount to Achieve</th></tr></thead>
       <tbody>
       {% for r in rows %}
         <tr>
           <td><a href="/budgets/{{ r.budget.id }}">{{ r.budget.name }}</a></td>
           <td>{{ r.budget.period_start }} → {{ r.budget.period_end }}</td>
           <td>{{ r.budget.responsible_person }}</td>
-          <td><span class="badge blue">{{ r.budget.analytic_account.name }}</span></td>
-          <td class="num">₹{{ "%.2f"|format(r.budget.planned_amount) }}</td>
-          <td class="num">₹{{ "%.2f"|format(r.actual) }}</td>
+          <td>
+            {% set s = r.budget.status.value %}
+            {% if s == 'confirmed' %}<span class="badge green">Confirmed</span>
+            {% elif s == 'revised' %}<span class="badge blue">Revised</span>
+            {% elif s == 'cancelled' %}<span class="badge red">Cancelled</span>
+            {% else %}<span class="badge gray">Draft</span>{% endif %}
+          </td>
+          <td class="num">₹{{ "%.2f"|format(r.total_committed) }}</td>
+          <td class="num">{% if r.total_achieved is not none %}₹{{ "%.2f"|format(r.total_achieved) }}{% else %}—{% endif %}</td>
           <td class="num">
-            {% if r.variance >= 0 %}<span style="color:var(--success);">₹{{ "%.2f"|format(r.variance) }}</span>
-            {% else %}<span style="color:var(--danger);">₹{{ "%.2f"|format(r.variance) }}</span>{% endif %}
+            {% if r.total_amount_to_achieve is not none %}
+              {% if r.total_amount_to_achieve >= 0 %}<span style="color:var(--success);">₹{{ "%.2f"|format(r.total_amount_to_achieve) }}</span>
+              {% else %}<span style="color:var(--danger);">₹{{ "%.2f"|format(r.total_amount_to_achieve) }}</span>{% endif %}
+            {% else %}—{% endif %}
           </td>
         </tr>
       {% endfor %}

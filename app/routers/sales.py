@@ -1,4 +1,5 @@
 from datetime import date, timedelta
+from itertools import zip_longest
 
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import RedirectResponse
@@ -12,6 +13,7 @@ from app.models import (
     Contact,
     ContactType,
     CustomerInvoice,
+    CustomerInvoiceLine,
     InvoiceStatus,
     JournalType,
     Payment,
@@ -23,7 +25,7 @@ from app.models import (
     SOStatus,
     User,
 )
-from app.services.accounting import get_journal, post_customer_invoice, post_customer_payment
+from app.services.accounting import ACCOUNT_SALES_INCOME, get_account, get_journal, post_customer_invoice, post_customer_payment
 from app.templating import templates
 
 router = APIRouter(prefix="/sales", tags=["sales"])
@@ -40,6 +42,10 @@ def _products(db: Session):
     return db.scalars(select(Product).where(Product.is_archived == False).order_by(Product.name)).all()  # noqa: E712
 
 
+def _analytic_accounts(db: Session):
+    return db.scalars(select(AnalyticAccount).where(AnalyticAccount.type == "income").order_by(AnalyticAccount.name)).all()
+
+
 @router.get("")
 def list_sales_orders(request: Request, user: User = Depends(require_role("admin", "accountant")),
                        db: Session = Depends(get_db)):
@@ -53,10 +59,9 @@ def list_sales_orders(request: Request, user: User = Depends(require_role("admin
 @router.get("/new")
 def new_so_form(request: Request, customer_id: int = None, user: User = Depends(require_role("admin", "accountant")),
                 db: Session = Depends(get_db)):
-    analytic_accounts = db.scalars(select(AnalyticAccount).where(AnalyticAccount.type == "income")).all()
     return templates.TemplateResponse("sales/form.html", {
         "request": request, "user": user, "active": "sales",
-        "customers": _customers(db), "products": _products(db), "analytic_accounts": analytic_accounts,
+        "customers": _customers(db), "products": _products(db), "analytic_accounts": _analytic_accounts(db),
         "today": date.today().isoformat(), "selected_customer_id": customer_id,
     })
 
@@ -67,17 +72,16 @@ async def create_so(request: Request, user: User = Depends(require_role("admin",
     form = await request.form()
     customer_id = int(form["customer_id"])
     so_date = date.fromisoformat(form["date"])
-    analytic_account_id = form.get("analytic_account_id") or None
     product_ids = form.getlist("product_id")
     qtys = form.getlist("qty")
     prices = form.getlist("unit_price")
     taxes = form.getlist("tax_percent")
+    analytic_ids = form.getlist("analytic_account_id")
 
     def render_error(message):
-        analytic_accounts = db.scalars(select(AnalyticAccount).where(AnalyticAccount.type == "income")).all()
         return templates.TemplateResponse("sales/form.html", {
             "request": request, "user": user, "active": "sales",
-            "customers": _customers(db), "products": _products(db), "analytic_accounts": analytic_accounts,
+            "customers": _customers(db), "products": _products(db), "analytic_accounts": _analytic_accounts(db),
             "today": so_date.isoformat(), "error": message,
         }, status_code=400)
 
@@ -86,7 +90,7 @@ async def create_so(request: Request, user: User = Depends(require_role("admin",
         return render_error("Please select an active customer.")
 
     lines = []
-    for pid, qty, price, tax in zip(product_ids, qtys, prices, taxes):
+    for pid, qty, price, tax, analytic_id in zip_longest(product_ids, qtys, prices, taxes, analytic_ids, fillvalue=""):
         if not pid:
             continue
         qty_f, price_f, tax_f = float(qty or 0), float(price or 0), float(tax or 0)
@@ -99,13 +103,15 @@ async def create_so(request: Request, user: User = Depends(require_role("admin",
         product = db.get(Product, int(pid))
         if not product or product.is_archived:
             return render_error("One of the selected products is archived or invalid.")
-        lines.append(SalesOrderLine(product_id=product.id, qty=qty_f, unit_price=price_f, tax_percent=tax_f))
+        lines.append(SalesOrderLine(
+            product_id=product.id, qty=qty_f, unit_price=price_f, tax_percent=tax_f,
+            analytic_account_id=int(analytic_id) if analytic_id else None,
+        ))
 
     if not lines:
         return render_error("Add at least one product line.")
 
-    so = SalesOrder(customer_id=customer.id, date=so_date, status=SOStatus.draft,
-                     analytic_account_id=int(analytic_account_id) if analytic_account_id else None)
+    so = SalesOrder(customer_id=customer.id, date=so_date, status=SOStatus.draft)
     so.lines = lines
     db.add(so)
     db.commit()
@@ -123,6 +129,30 @@ def so_detail(so_id: int, request: Request, user: User = Depends(require_role("a
     })
 
 
+@router.post("/{so_id}/confirm")
+def confirm_so(so_id: int, user: User = Depends(require_role("admin", "accountant")), db: Session = Depends(get_db)):
+    so = db.get(SalesOrder, so_id)
+    if not so:
+        return RedirectResponse(url="/sales?error=Sales+order+not+found", status_code=303)
+    if so.status != SOStatus.draft:
+        return RedirectResponse(url=f"/sales/{so.id}?error=Only+draft+orders+can+be+confirmed", status_code=303)
+    so.status = SOStatus.confirmed
+    db.commit()
+    return RedirectResponse(url=f"/sales/{so.id}?success=Sales+order+confirmed", status_code=303)
+
+
+@router.post("/{so_id}/cancel")
+def cancel_so(so_id: int, user: User = Depends(require_role("admin", "accountant")), db: Session = Depends(get_db)):
+    so = db.get(SalesOrder, so_id)
+    if not so:
+        return RedirectResponse(url="/sales?error=Sales+order+not+found", status_code=303)
+    if so.status not in (SOStatus.draft, SOStatus.confirmed):
+        return RedirectResponse(url=f"/sales/{so.id}?error=This+order+cannot+be+cancelled", status_code=303)
+    so.status = SOStatus.cancelled
+    db.commit()
+    return RedirectResponse(url=f"/sales/{so.id}?success=Sales+order+cancelled", status_code=303)
+
+
 @router.get("/{so_id}/generate-invoice")
 def generate_invoice_form(so_id: int, request: Request, user: User = Depends(require_role("admin", "accountant")),
                            db: Session = Depends(get_db)):
@@ -131,6 +161,8 @@ def generate_invoice_form(so_id: int, request: Request, user: User = Depends(req
         return RedirectResponse(url="/sales?error=Sales+order+not+found", status_code=303)
     if so.invoice:
         return RedirectResponse(url=f"/sales/{so.id}?error=An+invoice+already+exists+for+this+sales+order", status_code=303)
+    if so.status != SOStatus.confirmed:
+        return RedirectResponse(url=f"/sales/{so.id}?error=Confirm+the+order+before+creating+an+invoice", status_code=303)
     today = date.today()
     return templates.TemplateResponse("sales/generate_invoice.html", {
         "request": request, "user": user, "active": "sales", "so": so,
@@ -140,18 +172,27 @@ def generate_invoice_form(so_id: int, request: Request, user: User = Depends(req
 
 @router.post("/{so_id}/generate-invoice")
 def generate_invoice(so_id: int, request: Request, invoice_date: str = Form(...), due_date: str = Form(...),
-                      user: User = Depends(require_role("admin", "accountant")), db: Session = Depends(get_db)):
+                      reference: str = Form(""), user: User = Depends(require_role("admin", "accountant")),
+                      db: Session = Depends(get_db)):
     so = db.get(SalesOrder, so_id)
     if not so:
         return RedirectResponse(url="/sales?error=Sales+order+not+found", status_code=303)
     if so.invoice:
         return RedirectResponse(url=f"/sales/{so.id}?error=An+invoice+already+exists+for+this+sales+order", status_code=303)
+    if so.status != SOStatus.confirmed:
+        return RedirectResponse(url=f"/sales/{so.id}?error=Confirm+the+order+before+creating+an+invoice", status_code=303)
 
+    sales_income = get_account(db, ACCOUNT_SALES_INCOME)
     invoice = CustomerInvoice(
-        sales_order_id=so.id, customer_id=so.customer_id,
+        sales_order_id=so.id, customer_id=so.customer_id, reference=reference or None,
         invoice_date=date.fromisoformat(invoice_date), due_date=date.fromisoformat(due_date),
-        subtotal=so.subtotal, tax_amount=so.tax_amount, total=so.total,
     )
+    invoice.lines = [
+        CustomerInvoiceLine(product_id=l.product_id, account_id=sales_income.id,
+                             analytic_account_id=l.analytic_account_id, qty=l.qty,
+                             unit_price=l.unit_price, tax_percent=l.tax_percent)
+        for l in so.lines
+    ]
     db.add(invoice)
     db.flush()
 
@@ -193,7 +234,8 @@ def pay_invoice_form(invoice_id: int, request: Request,
 
 @router.post("/invoices/{invoice_id}/pay")
 def pay_invoice(invoice_id: int, request: Request, amount: float = Form(...), method: str = Form(...),
-                user: User = Depends(require_role("admin", "accountant", "contact")), db: Session = Depends(get_db)):
+                note: str = Form(""), user: User = Depends(require_role("admin", "accountant", "contact")),
+                db: Session = Depends(get_db)):
     invoice = db.get(CustomerInvoice, invoice_id)
     if not invoice:
         return RedirectResponse(url="/sales?error=Invoice+not+found", status_code=303)
@@ -215,7 +257,7 @@ def pay_invoice(invoice_id: int, request: Request, amount: float = Form(...), me
 
     payment = Payment(
         direction=PaymentDirection.inbound, party_contact_id=invoice.customer_id,
-        method=PaymentMethod(method), amount=amount, customer_invoice_id=invoice.id,
+        method=PaymentMethod(method), amount=amount, customer_invoice_id=invoice.id, note=note or None,
     )
     db.add(payment)
     db.flush()

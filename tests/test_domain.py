@@ -6,9 +6,12 @@ from app.models import (
     AnalyticAccount,
     AnalyticType,
     Budget,
+    BudgetLine,
+    BudgetStatus,
     Contact,
     ContactType,
     CustomerInvoice,
+    CustomerInvoiceLine,
     JournalType,
     Payment,
     PaymentDirection,
@@ -20,6 +23,7 @@ from app.models import (
     SalesOrder,
     SalesOrderLine,
     VendorBill,
+    VendorBillLine,
 )
 from app.services import accounting as acct
 from app.services import reports
@@ -126,13 +130,16 @@ def test_unbalanced_journal_entry_is_rejected(seeded_journals):
 def test_vendor_bill_posting_creates_expected_accounting_effect(seeded_journals):
     db = seeded_journals
     vendor = Contact(name="Azure Furniture", type=ContactType.vendor)
-    db.add(vendor)
+    chair = Product(name="Office Chair", type=ProductType.goods, sales_price=4500, cost_price=2800)
+    db.add_all([vendor, chair])
     db.flush()
     po = PurchaseOrder(vendor_id=vendor.id, date=date.today())
     db.add(po)
     db.flush()
+    purchases_expense = acct.get_account(db, acct.ACCOUNT_PURCHASES_EXPENSE)
     bill = VendorBill(purchase_order_id=po.id, vendor_id=vendor.id, invoice_date=date.today(),
-                       due_date=date.today() + timedelta(days=15), total=28000)
+                       due_date=date.today() + timedelta(days=15))
+    bill.lines = [VendorBillLine(product_id=chair.id, account_id=purchases_expense.id, qty=10, unit_price=2800)]
     db.add(bill)
     db.flush()
 
@@ -150,13 +157,16 @@ def test_vendor_bill_posting_creates_expected_accounting_effect(seeded_journals)
 def test_vendor_payment_posting_creates_expected_accounting_effect(seeded_journals):
     db = seeded_journals
     vendor = Contact(name="Azure Furniture", type=ContactType.vendor)
-    db.add(vendor)
+    chair = Product(name="Office Chair", type=ProductType.goods, sales_price=4500, cost_price=2800)
+    db.add_all([vendor, chair])
     db.flush()
     po = PurchaseOrder(vendor_id=vendor.id, date=date.today())
     db.add(po)
     db.flush()
+    purchases_expense = acct.get_account(db, acct.ACCOUNT_PURCHASES_EXPENSE)
     bill = VendorBill(purchase_order_id=po.id, vendor_id=vendor.id, invoice_date=date.today(),
-                       due_date=date.today() + timedelta(days=15), total=28000)
+                       due_date=date.today() + timedelta(days=15))
+    bill.lines = [VendorBillLine(product_id=chair.id, account_id=purchases_expense.id, qty=10, unit_price=2800)]
     db.add(bill)
     db.flush()
     purchase_journal = acct.get_journal(db, JournalType.purchase)
@@ -181,14 +191,17 @@ def test_vendor_payment_posting_creates_expected_accounting_effect(seeded_journa
 def test_customer_invoice_posting_creates_expected_accounting_effect(seeded_journals):
     db = seeded_journals
     customer = Contact(name="Nimesh Pathak", type=ContactType.customer)
-    db.add(customer)
+    chair = Product(name="Office Chair", type=ProductType.goods, sales_price=4500, cost_price=2800)
+    db.add_all([customer, chair])
     db.flush()
     so = SalesOrder(customer_id=customer.id, date=date.today())
     db.add(so)
     db.flush()
+    sales_income = acct.get_account(db, acct.ACCOUNT_SALES_INCOME)
     invoice = CustomerInvoice(sales_order_id=so.id, customer_id=customer.id, invoice_date=date.today(),
-                               due_date=date.today() + timedelta(days=15),
-                               subtotal=22500, tax_amount=1125, total=23625)
+                               due_date=date.today() + timedelta(days=15))
+    invoice.lines = [CustomerInvoiceLine(product_id=chair.id, account_id=sales_income.id,
+                                          qty=5, unit_price=4500, tax_percent=5)]
     db.add(invoice)
     db.flush()
 
@@ -208,14 +221,17 @@ def test_customer_invoice_posting_creates_expected_accounting_effect(seeded_jour
 def test_customer_payment_posting_creates_expected_accounting_effect(seeded_journals):
     db = seeded_journals
     customer = Contact(name="Nimesh Pathak", type=ContactType.customer)
-    db.add(customer)
+    chair = Product(name="Office Chair", type=ProductType.goods, sales_price=4500, cost_price=2800)
+    db.add_all([customer, chair])
     db.flush()
     so = SalesOrder(customer_id=customer.id, date=date.today())
     db.add(so)
     db.flush()
+    sales_income = acct.get_account(db, acct.ACCOUNT_SALES_INCOME)
     invoice = CustomerInvoice(sales_order_id=so.id, customer_id=customer.id, invoice_date=date.today(),
-                               due_date=date.today() + timedelta(days=15),
-                               subtotal=22500, tax_amount=1125, total=23625)
+                               due_date=date.today() + timedelta(days=15))
+    invoice.lines = [CustomerInvoiceLine(product_id=chair.id, account_id=sales_income.id,
+                                          qty=5, unit_price=4500, tax_percent=5)]
     db.add(invoice)
     db.flush()
     sales_journal = acct.get_journal(db, JournalType.sales)
@@ -245,14 +261,19 @@ def test_profit_and_loss_reflects_postings(seeded_journals):
     db = seeded_journals
     vendor = Contact(name="Azure Furniture", type=ContactType.vendor)
     customer = Contact(name="Nimesh Pathak", type=ContactType.customer)
-    db.add_all([vendor, customer])
+    chair = Product(name="Office Chair", type=ProductType.goods, sales_price=4500, cost_price=2800)
+    db.add_all([vendor, customer, chair])
     db.flush()
+
+    purchases_expense = acct.get_account(db, acct.ACCOUNT_PURCHASES_EXPENSE)
+    sales_income = acct.get_account(db, acct.ACCOUNT_SALES_INCOME)
 
     po = PurchaseOrder(vendor_id=vendor.id, date=date.today())
     db.add(po)
     db.flush()
     bill = VendorBill(purchase_order_id=po.id, vendor_id=vendor.id, invoice_date=date.today(),
-                       due_date=date.today(), total=28000)
+                       due_date=date.today())
+    bill.lines = [VendorBillLine(product_id=chair.id, account_id=purchases_expense.id, qty=10, unit_price=2800)]
     db.add(bill)
     db.flush()
     acct.post_vendor_bill(db, bill, acct.get_journal(db, JournalType.purchase))
@@ -261,7 +282,9 @@ def test_profit_and_loss_reflects_postings(seeded_journals):
     db.add(so)
     db.flush()
     invoice = CustomerInvoice(sales_order_id=so.id, customer_id=customer.id, invoice_date=date.today(),
-                              due_date=date.today(), subtotal=22500, tax_amount=1125, total=23625)
+                              due_date=date.today())
+    invoice.lines = [CustomerInvoiceLine(product_id=chair.id, account_id=sales_income.id,
+                                          qty=5, unit_price=4500, tax_percent=5)]
     db.add(invoice)
     db.flush()
     acct.post_customer_invoice(db, invoice, acct.get_journal(db, JournalType.sales))
@@ -294,24 +317,28 @@ def test_balance_sheet_stays_balanced(seeded_journals):
 def test_budget_variance_calculation(seeded_journals):
     db = seeded_journals
     customer = Contact(name="Nimesh Pathak", type=ContactType.customer)
-    db.add(customer)
+    chair = Product(name="Office Chair", type=ProductType.goods, sales_price=4500, cost_price=2800)
+    db.add_all([customer, chair])
     db.flush()
     analytic = AnalyticAccount(name="Retail Sales", type=AnalyticType.income)
     db.add(analytic)
     db.flush()
+    sales_income = acct.get_account(db, acct.ACCOUNT_SALES_INCOME)
 
     today = date.today()
     budget = Budget(name="Retail Budget", period_start=today - timedelta(days=5),
-                     period_end=today + timedelta(days=5), responsible_person="Priya Verma",
-                     planned_amount=30000, analytic_account_id=analytic.id)
+                     period_end=today + timedelta(days=5), responsible_person="Nimesh Pathak",
+                     status=BudgetStatus.confirmed)
+    budget.lines = [BudgetLine(analytic_account_id=analytic.id, committed_amount=30000)]
     db.add(budget)
     db.flush()
 
-    so = SalesOrder(customer_id=customer.id, date=today, analytic_account_id=analytic.id)
+    so = SalesOrder(customer_id=customer.id, date=today)
     db.add(so)
     db.flush()
-    invoice = CustomerInvoice(sales_order_id=so.id, customer_id=customer.id, invoice_date=today,
-                              due_date=today, subtotal=22500, tax_amount=0, total=22500)
+    invoice = CustomerInvoice(sales_order_id=so.id, customer_id=customer.id, invoice_date=today, due_date=today)
+    invoice.lines = [CustomerInvoiceLine(product_id=chair.id, account_id=sales_income.id,
+                                          analytic_account_id=analytic.id, qty=5, unit_price=4500, tax_percent=0)]
     db.add(invoice)
     db.flush()
     acct.post_customer_invoice(db, invoice, acct.get_journal(db, JournalType.sales))
@@ -319,5 +346,6 @@ def test_budget_variance_calculation(seeded_journals):
 
     rows = reports.budget_report(db)
     row = next(r for r in rows if r["budget"].id == budget.id)
-    assert row["actual"] == 22500
-    assert row["variance"] == 30000 - 22500
+    line_row = row["lines"][0]
+    assert line_row["achieved"] == 22500
+    assert line_row["amount_to_achieve"] == 30000 - 22500

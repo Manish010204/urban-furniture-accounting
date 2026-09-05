@@ -9,6 +9,8 @@ from app.models import (
     AccountType,
     AnalyticAccount,
     Budget,
+    BudgetLine,
+    BudgetStatus,
     JournalEntry,
     JournalEntryLine,
 )
@@ -102,27 +104,65 @@ def profit_and_loss(db: Session, as_of: date_type | None = None, since: date_typ
     }
 
 
+def _analytic_actual(db: Session, analytic_account: AnalyticAccount, period_start, period_end) -> float:
+    query = (
+        select(JournalEntryLine)
+        .join(JournalEntry, JournalEntryLine.entry_id == JournalEntry.id)
+        .where(JournalEntryLine.analytic_account_id == analytic_account.id)
+        .where(JournalEntry.date >= period_start)
+        .where(JournalEntry.date <= period_end)
+    )
+    rows = db.scalars(query).all()
+    if analytic_account.type.value == "income":
+        return round(sum(r.credit - r.debit for r in rows), 2)
+    return round(sum(r.debit - r.credit for r in rows), 2)
+
+
+def budget_line_report(db: Session, line: BudgetLine, budget: Budget) -> dict:
+    achieved = _analytic_actual(db, line.analytic_account, budget.period_start, budget.period_end)
+    achieved_pct = round((achieved / line.committed_amount) * 100, 1) if line.committed_amount else 0.0
+    return {
+        "line": line,
+        "achieved": achieved,
+        "achieved_pct": achieved_pct,
+        "amount_to_achieve": round(line.committed_amount - achieved, 2),
+    }
+
+
 def budget_report(db: Session) -> list[dict]:
-    budgets = db.scalars(select(Budget)).all()
+    """One row per budget, each carrying its per-analytic-account lines with
+    achieved/achieved%/amount-to-achieve (only meaningful once confirmed)."""
+    budgets = db.scalars(select(Budget).order_by(Budget.id.desc())).all()
     results = []
     for budget in budgets:
-        query = (
-            select(JournalEntryLine)
-            .join(JournalEntry, JournalEntryLine.entry_id == JournalEntry.id)
-            .where(JournalEntryLine.analytic_account_id == budget.analytic_account_id)
-            .where(JournalEntry.date >= budget.period_start)
-            .where(JournalEntry.date <= budget.period_end)
-        )
-        rows = db.scalars(query).all()
-        if budget.analytic_account.type.value == "income":
-            actual = round(sum(r.credit - r.debit for r in rows), 2)
-        else:
-            actual = round(sum(r.debit - r.credit for r in rows), 2)
-        results.append(
-            {
-                "budget": budget,
-                "actual": actual,
-                "variance": round(budget.planned_amount - actual, 2),
-            }
-        )
+        show_actuals = budget.status in (BudgetStatus.confirmed, BudgetStatus.revised)
+        line_rows = [budget_line_report(db, line, budget) for line in budget.lines] if show_actuals else [
+            {"line": line, "achieved": None, "achieved_pct": None, "amount_to_achieve": None} for line in budget.lines
+        ]
+        total_achieved = round(sum(r["achieved"] for r in line_rows), 2) if show_actuals else None
+        results.append({
+            "budget": budget,
+            "lines": line_rows,
+            "total_committed": budget.planned_amount,
+            "total_achieved": total_achieved,
+            "total_amount_to_achieve": round(budget.planned_amount - total_achieved, 2) if show_actuals else None,
+        })
     return results
+
+
+def remaining_budget_for_analytic(db: Session, analytic_account_id: int, as_of, exclude_transaction_amount: float = 0):
+    """Returns (budget, remaining_amount) for the confirmed budget line covering this
+    analytic account and date, or None if no confirmed budget covers it."""
+    line = db.scalar(
+        select(BudgetLine)
+        .join(Budget, BudgetLine.budget_id == Budget.id)
+        .where(BudgetLine.analytic_account_id == analytic_account_id)
+        .where(Budget.status == BudgetStatus.confirmed)
+        .where(Budget.period_start <= as_of)
+        .where(Budget.period_end >= as_of)
+    )
+    if line is None:
+        return None
+    achieved = _analytic_actual(db, line.analytic_account, line.budget.period_start, line.budget.period_end)
+    remaining = line.committed_amount - achieved
+    return line.budget, remaining

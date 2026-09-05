@@ -2,17 +2,53 @@
 {% block title %}{{ budget.name }}{% endblock %}
 {% block heading %}{{ budget.name }}{% endblock %}
 {% block content %}
-<div class="panel" style="max-width:560px;">
-  <div class="panel-header"><h2>Budget Details</h2></div>
+<div class="panel" style="max-width:820px;">
+  <div class="panel-header">
+    <h2>Budget Details</h2>
+    <div style="display:flex;gap:8px;align-items:center;">
+      {% set s = budget.status.value %}
+      {% if s == 'confirmed' %}<span class="badge green">Confirmed</span>
+      {% elif s == 'revised' %}<span class="badge blue">Revised</span>
+      {% elif s == 'cancelled' %}<span class="badge red">Cancelled</span>
+      {% else %}<span class="badge gray">Draft</span>{% endif %}
+      {% if budget.status.value == 'draft' %}
+      <form method="post" action="/budgets/{{ budget.id }}/confirm"><button class="btn small primary" type="submit">Confirm</button></form>
+      <form method="post" action="/budgets/{{ budget.id }}/cancel"><button class="btn small danger" type="submit">Cancel</button></form>
+      {% elif budget.status.value == 'confirmed' %}
+      <a class="btn small" href="/budgets/{{ budget.id }}/revise">Revise</a>
+      <form method="post" action="/budgets/{{ budget.id }}/cancel"><button class="btn small danger" type="submit">Cancel</button></form>
+      {% endif %}
+    </div>
+  </div>
   <div class="panel-body">
     <div class="kv"><span class="k">Period</span><span class="v">{{ budget.period_start }} → {{ budget.period_end }}</span></div>
     <div class="kv"><span class="k">Responsible Person</span><span class="v">{{ budget.responsible_person }}</span></div>
-    <div class="kv"><span class="k">Analytic Account</span><span class="v">{{ budget.analytic_account.name }}</span></div>
-    <div class="kv"><span class="k">Planned Amount</span><span class="v">₹{{ "%.2f"|format(budget.planned_amount) }}</span></div>
-    {% if row %}
-    <div class="kv"><span class="k">Actual Amount</span><span class="v">₹{{ "%.2f"|format(row.actual) }}</span></div>
-    <div class="kv"><span class="k">Variance</span><span class="v">₹{{ "%.2f"|format(row.variance) }}</span></div>
+    {% if budget.revises_budget %}
+    <div class="kv"><span class="k">Revision Of</span><span class="v"><a href="/budgets/{{ budget.revises_budget_id }}">{{ budget.revises_budget.name }}</a></span></div>
     {% endif %}
+    {% if revised_by %}
+    <div class="kv"><span class="k">Revised With</span><span class="v"><a href="/budgets/{{ revised_by.id }}">{{ revised_by.name }}</a></span></div>
+    {% endif %}
+
+    <table style="margin-top:16px;">
+      <thead><tr><th>Analytic Account</th><th>Type</th><th>Committed</th>
+        {% if row.total_achieved is not none %}<th>Achieved</th><th>Achieved %</th><th>Amount to Achieve</th>{% endif %}
+      </tr></thead>
+      <tbody>
+      {% for lr in row.lines %}
+        <tr>
+          <td>{{ lr.line.analytic_account.name }}</td>
+          <td><span class="badge blue">{{ lr.line.type.value|title }}</span></td>
+          <td class="num">₹{{ "%.2f"|format(lr.line.committed_amount) }}</td>
+          {% if lr.achieved is not none %}
+          <td class="num">₹{{ "%.2f"|format(lr.achieved) }}</td>
+          <td class="num">{{ lr.achieved_pct }}%</td>
+          <td class="num">₹{{ "%.2f"|format(lr.amount_to_achieve) }}</td>
+          {% endif %}
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
   </div>
 </div>
 {% endblock %}

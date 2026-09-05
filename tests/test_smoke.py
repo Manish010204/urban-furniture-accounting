@@ -1,9 +1,11 @@
 """Smoke tests: the application starts, connects to SQLite, and every major
 page/workflow responds without error. Uses the real seeded demo application."""
+from tests.conftest import SEED_CREDENTIALS
 
 
-def login(client, user_id=1):
-    r = client.post(f"/login/{user_id}", follow_redirects=True)
+def login(client, role="admin"):
+    login_id, password = SEED_CREDENTIALS[role]
+    r = client.post("/login", data={"login_id": login_id, "password": password}, follow_redirects=True)
     assert r.status_code == 200
     return r
 
@@ -12,6 +14,50 @@ def test_app_starts_and_serves_login_page(client):
     r = client.get("/login")
     assert r.status_code == 200
     assert "Urban Furniture" in r.text
+
+
+def test_invalid_login_rejected(client):
+    r = client.post("/login", data={"login_id": "admin1", "password": "wrong-password"})
+    assert r.status_code == 400
+    assert "Invalid Login Id or Password" in r.text
+
+
+def test_signup_creates_accountant_and_can_log_in(client):
+    r = client.post("/signup", data={
+        "name": "New Accountant", "login_id": "newacct1", "email": "newacct@test.com",
+        "password": "NewPass@123", "confirm_password": "NewPass@123",
+    }, follow_redirects=True)
+    assert r.status_code == 200
+    assert "Sign In" in r.text
+
+    r = client.post("/login", data={"login_id": "newacct1", "password": "NewPass@123"}, follow_redirects=True)
+    assert r.status_code == 200
+    r = client.get("/contacts")
+    assert r.status_code == 200  # accountant can view master data
+    r = client.get("/contacts/1/edit")
+    assert "/contacts/1/edit" not in r.url.path  # but not edit/archive (admin-only)
+
+
+def test_signup_rejects_weak_password(client):
+    r = client.post("/signup", data={
+        "name": "Weak Pw", "login_id": "weakpw1", "email": "weakpw@test.com",
+        "password": "weakpass", "confirm_password": "weakpass",
+    })
+    assert r.status_code == 400
+    assert "Password" in r.text
+
+
+def test_signup_rejects_duplicate_login_id(client):
+    client.post("/signup", data={
+        "name": "Dup One", "login_id": "dupuser1", "email": "dup1@test.com",
+        "password": "Strong@123", "confirm_password": "Strong@123",
+    })
+    r = client.post("/signup", data={
+        "name": "Dup Two", "login_id": "dupuser1", "email": "dup2@test.com",
+        "password": "Strong@123", "confirm_password": "Strong@123",
+    })
+    assert r.status_code == 400
+    assert "already taken" in r.text
 
 
 def test_dashboard_loads_after_login(client):
@@ -67,31 +113,16 @@ def test_create_transaction_generate_bill_and_register_payment(client):
         "product_id": ["1"], "qty": ["2"], "unit_price": ["2800"],
     }, follow_redirects=True)
     assert r.status_code == 200
-    assert "PO-" in r.text
+    po_id = int(r.url.path.rstrip("/").split("/")[-1])
 
-    po_id = r.url.path.split("/")[-1] if "purchases/" in str(r.url) else None
-    # fall back: fetch the purchases list and take the newest PO id
-    r_list = client.get("/purchases")
-    assert r_list.status_code == 200
+    r = client.post(f"/purchases/{po_id}/confirm", follow_redirects=True)
+    assert r.status_code == 200
 
-    r = client.get("/purchases")
-    # locate the highest PO id referenced on the page
-    import re
-    ids = [int(m) for m in re.findall(r"/purchases/(\d+)\"", r.text)]
-    assert ids, "expected at least one purchase order id on the list page"
-    new_po_id = max(ids)
-
-    r = client.post(f"/purchases/{new_po_id}/convert",
+    r = client.post(f"/purchases/{po_id}/convert",
                      data={"invoice_date": "2026-01-11", "due_date": "2026-01-26"}, follow_redirects=True)
     assert r.status_code == 200
     assert "Vendor Bill" in r.text
-
-    bill_ids = [int(m) for m in re.findall(r"/purchases/bills/(\d+)\"", r.text)]
-    bill_id = max(bill_ids) if bill_ids else None
-    if bill_id is None:
-        r_list_bills = client.get("/purchases")
-        bill_ids = [int(m) for m in re.findall(r"/purchases/bills/(\d+)\"", r_list_bills.text)]
-        bill_id = max(bill_ids)
+    bill_id = int(r.url.path.rstrip("/").split("/")[-1])
 
     r = client.post(f"/purchases/bills/{bill_id}/pay", data={"amount": "5600", "method": "bank"},
                      follow_redirects=True)
@@ -139,17 +170,98 @@ def test_archived_vendor_rejected_in_new_purchase_order(client):
     assert "active vendor" in r.text
 
 
-def test_vendor_bill_overpayment_rejected(client):
+def test_cannot_convert_unconfirmed_purchase_order(client):
+    login(client)
+    r = client.post("/purchases/new", data={
+        "vendor_id": "1", "date": "2026-01-25",
+        "product_id": ["1"], "qty": ["1"], "unit_price": ["2800"],
+    }, follow_redirects=True)
+    po_id = int(r.url.path.rstrip("/").split("/")[-1])
+    r = client.get(f"/purchases/{po_id}/convert", follow_redirects=True)
+    assert "Confirm the order" in r.text
+
+
+def test_budget_confirm_and_revise_lifecycle(client):
     import re
+    login(client)
+    client.post("/analytic-accounts/new", data={"name": "E2E Marketing", "type": "expense"},
+                follow_redirects=True)
+
+    r = client.get("/budgets/new")
+    match = re.search(r'<option value="(\d+)">E2E Marketing', r.text)
+    assert match
+    analytic_id = int(match.group(1))
+
+    r = client.post("/budgets/new", data={
+        "name": "E2E Test Budget", "period_start": "2026-01-01", "period_end": "2026-12-31",
+        "responsible_person": "Nimesh Pathak",
+        "analytic_account_id": [str(analytic_id)], "committed_amount": ["10000"],
+    }, follow_redirects=True)
+    assert r.status_code == 200
+    budget_id = int(r.url.path.rstrip("/").split("/")[-1])
+    assert "Draft" in r.text
+
+    r = client.post(f"/budgets/{budget_id}/confirm", follow_redirects=True)
+    assert "Confirmed" in r.text
+
+    r = client.get(f"/budgets/{budget_id}/revise")
+    line_match = re.search(r'name="line_id" value="(\d+)"', r.text)
+    assert line_match
+    line_id = line_match.group(1)
+
+    r = client.post(f"/budgets/{budget_id}/revise", data={
+        "name": "E2E Test Budget Revised", "line_id": [line_id], "committed_amount": ["15000"],
+    }, follow_redirects=True)
+    assert r.status_code == 200
+    assert "Revision Of" in r.text
+
+    r = client.get(f"/budgets/{budget_id}")
+    assert "Revised" in r.text
+    assert "Revised With" in r.text
+
+
+def test_confirming_po_over_budget_shows_non_blocking_warning(client):
+    import re
+    login(client)
+    client.post("/analytic-accounts/new", data={"name": "E2E Tight Budget Line", "type": "expense"},
+                follow_redirects=True)
+    r = client.get("/budgets/new")
+    analytic_id = int(re.search(r'<option value="(\d+)">E2E Tight Budget Line', r.text).group(1))
+
+    r = client.post("/budgets/new", data={
+        "name": "E2E Tight Budget", "period_start": "2020-01-01", "period_end": "2030-12-31",
+        "responsible_person": "Nimesh Pathak",
+        "analytic_account_id": [str(analytic_id)], "committed_amount": ["100"],
+    }, follow_redirects=True)
+    budget_id = int(r.url.path.rstrip("/").split("/")[-1])
+    client.post(f"/budgets/{budget_id}/confirm", follow_redirects=True)
+
+    r = client.post("/purchases/new", data={
+        "vendor_id": "1", "date": "2026-01-30",
+        "product_id": ["1"], "qty": ["10"], "unit_price": ["2800"],
+        "analytic_account_id": [str(analytic_id)],
+    }, follow_redirects=True)
+    po_id = int(r.url.path.rstrip("/").split("/")[-1])
+
+    r = client.post(f"/purchases/{po_id}/confirm", follow_redirects=True)
+    assert r.status_code == 200
+    assert "exceeds the remaining budget" in r.text
+    # non-blocking: the order is still confirmed despite the warning
+    assert "Confirmed" in r.text
+
+
+def test_vendor_bill_overpayment_rejected(client):
     login(client)
     r = client.post("/purchases/new", data={
         "vendor_id": "1", "date": "2026-01-20",
         "product_id": ["1"], "qty": ["1"], "unit_price": ["2800"],
     }, follow_redirects=True)
-    po_id = max(int(m) for m in re.findall(r"PO-(\d+)", r.text))
+    po_id = int(r.url.path.rstrip("/").split("/")[-1])
+    client.post(f"/purchases/{po_id}/confirm", follow_redirects=True)
+
     r = client.post(f"/purchases/{po_id}/convert",
                      data={"invoice_date": "2026-01-21", "due_date": "2026-02-05"}, follow_redirects=True)
-    bill_id = max(int(m) for m in re.findall(r"BILL-(\d+)", r.text))
+    bill_id = int(r.url.path.rstrip("/").split("/")[-1])
 
     r = client.post(f"/purchases/bills/{bill_id}/pay", data={"amount": "999999", "method": "bank"},
                      follow_redirects=True)

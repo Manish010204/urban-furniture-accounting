@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Sign Up — Urban Furniture Accounting{% endblock %}
+{% block guest_content %}
+<div class="login-wrap">
+  <div class="login-card">
+    <h1 style="margin-top:0;font-size:20px;">Create Account</h1>
+    <p class="help-text" style="margin-bottom:16px;">Sign-up creates an Invoicing User (Accountant) account.</p>
+    {% if error %}<div class="flash error">{{ error }}</div>{% endif %}
+    <form method="post" action="/signup">
+      <div class="field">
+        <label>Name</label>
+        <input type="text" name="name" required value="{{ form.name if form is defined else '' }}">
+      </div>
+      <div class="field">
+        <label>Login Id</label>
+        <input type="text" name="login_id" required minlength="6" maxlength="12" value="{{ form.login_id if form is defined else '' }}">
+        <div class="help-text">6-12 characters, letters/digits/underscore, must be unique.</div>
+      </div>
+      <div class="field">
+        <label>Email Id</label>
+        <input type="email" name="email" required value="{{ form.email if form is defined else '' }}">
+        <div class="help-text">Must not already be registered.</div>
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <input type="password" name="password" required>
+        <div class="help-text">More than 8 characters, with uppercase, lowercase, and a special character.</div>
+      </div>
+      <div class="field">
+        <label>Re-Enter Password</label>
+        <input type="password" name="confirm_password" required>
+      </div>
+      <div class="btn-row">
+        <button class="btn primary" type="submit" style="width:100%;justify-content:center;">Sign Up</button>
+      </div>
+    </form>
+    <p class="help-text" style="text-align:center;margin-top:16px;">
+      <a href="/forgot-password">Forgot Password</a> &nbsp;|&nbsp; <a href="/login">Back to Sign In</a>
+    </p>
+  </div>
+</div>
+{% endblock %}

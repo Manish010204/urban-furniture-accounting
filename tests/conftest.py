@@ -11,6 +11,13 @@ _fd, _TEST_DB_PATH = tempfile.mkstemp(suffix=".db")
 os.close(_fd)
 os.environ["DATABASE_URL"] = f"sqlite:///{_TEST_DB_PATH}"
 
+# Matches app/seed.py — the three demo users created on first startup.
+SEED_CREDENTIALS = {
+    "admin": ("admin1", "Admin@123"),
+    "accountant": ("priya1", "Priya@123"),
+    "contact": ("nimesh1", "Nimesh@123"),
+}
+
 
 @pytest.fixture(scope="session")
 def client():

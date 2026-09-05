@@ -1,11 +1,15 @@
 {% extends "base.html" %}
-{% block title %}Convert PO-{{ po.id }} to Vendor Bill{% endblock %}
+{% block title %}Convert {{ po.number }} to Vendor Bill{% endblock %}
 {% block heading %}Convert to Vendor Bill{% endblock %}
 {% block content %}
 <div class="panel" style="max-width:520px;">
   <div class="panel-body">
-    <p class="help-text">PO-{{ po.id }} — {{ po.vendor.name }} — Total ₹{{ "%.2f"|format(po.total) }}</p>
+    <p class="help-text">{{ po.number }} — {{ po.vendor.name }} — Total ₹{{ "%.2f"|format(po.total) }}</p>
     <form method="post" action="/purchases/{{ po.id }}/convert">
+      <div class="field">
+        <label>Bill Reference</label>
+        <input type="text" name="reference" placeholder="e.g. vendor's own invoice number">
+      </div>
       <div class="field">
         <label>Invoice Date *</label>
         <input type="date" name="invoice_date" required value="{{ invoice_date }}">

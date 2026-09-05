@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.auth import require_role
 from app.database import get_db
-from app.models import Account, Journal, JournalEntry, User
+from app.models import Account, Contact, Journal, JournalEntry, User
 from app.services.accounting import UnbalancedEntryError, create_journal_entry
 from app.templating import templates
 
@@ -28,9 +28,10 @@ def new_entry_form(request: Request, user: User = Depends(require_role("admin", 
                     db: Session = Depends(get_db)):
     journals = db.scalars(select(Journal).order_by(Journal.name)).all()
     accounts = db.scalars(select(Account).order_by(Account.name)).all()
+    contacts = db.scalars(select(Contact).where(Contact.is_archived == False).order_by(Contact.name)).all()  # noqa: E712
     return templates.TemplateResponse("journal_entries/form.html", {
         "request": request, "user": user, "active": "journal_entries",
-        "journals": journals, "accounts": accounts, "today": date.today().isoformat(),
+        "journals": journals, "accounts": accounts, "contacts": contacts, "today": date.today().isoformat(),
     })
 
 
@@ -42,19 +43,24 @@ async def create_entry(request: Request, user: User = Depends(require_role("admi
     entry_date = date.fromisoformat(form["date"])
     reference = form.get("reference", "")
     account_ids = form.getlist("account_id")
+    partner_ids = form.getlist("partner_contact_id")
     debits = form.getlist("debit")
     credits = form.getlist("credit")
 
     lines = []
-    for acc_id, debit, credit in zip(account_ids, debits, credits):
+    for acc_id, partner_id, debit, credit in zip(account_ids, partner_ids, debits, credits):
         if not acc_id:
             continue
         account = db.get(Account, int(acc_id))
-        lines.append({"account": account, "debit": float(debit or 0), "credit": float(credit or 0)})
+        lines.append({
+            "account": account, "debit": float(debit or 0), "credit": float(credit or 0),
+            "partner_contact_id": int(partner_id) if partner_id else None,
+        })
 
     journal = db.get(Journal, journal_id)
     journals = db.scalars(select(Journal).order_by(Journal.name)).all()
     accounts = db.scalars(select(Account).order_by(Account.name)).all()
+    contacts = db.scalars(select(Contact).where(Contact.is_archived == False).order_by(Contact.name)).all()  # noqa: E712
 
     try:
         if len(lines) < 2:
@@ -65,7 +71,8 @@ async def create_entry(request: Request, user: User = Depends(require_role("admi
         db.rollback()
         return templates.TemplateResponse("journal_entries/form.html", {
             "request": request, "user": user, "active": "journal_entries",
-            "journals": journals, "accounts": accounts, "today": entry_date.isoformat(), "error": str(e),
+            "journals": journals, "accounts": accounts, "contacts": contacts,
+            "today": entry_date.isoformat(), "error": str(e),
         }, status_code=400)
     return RedirectResponse(url="/journal-entries?success=Journal+entry+posted", status_code=303)
 

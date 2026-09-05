@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Revise {{ budget.name }}{% endblock %}
+{% block heading %}Revise Budget{% endblock %}
+{% block content %}
+<div class="panel" style="max-width:700px;">
+  <div class="panel-body">
+    <p class="help-text">Revising <strong>{{ budget.name }}</strong> creates a new confirmed budget with updated
+      committed amounts; the original moves to "Revised" and links here.</p>
+    <form method="post" action="/budgets/{{ budget.id }}/revise">
+      <div class="field">
+        <label>New Budget Name</label>
+        <input type="text" name="name" value="{{ suggested_name }}">
+      </div>
+      <table class="line-items-table">
+        <thead><tr><th>Analytic Account</th><th>Old Committed</th><th>New Committed</th></tr></thead>
+        <tbody>
+        {% for line in budget.lines %}
+          <tr>
+            <td>{{ line.analytic_account.name }}<input type="hidden" name="line_id" value="{{ line.id }}"></td>
+            <td class="num">₹{{ "%.2f"|format(line.committed_amount) }}</td>
+            <td><input type="number" step="0.01" min="0" name="committed_amount" value="{{ line.committed_amount }}"></td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      <div class="btn-row">
+        <button class="btn primary" type="submit">Save Revision</button>
+        <a class="btn" href="/budgets/{{ budget.id }}">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

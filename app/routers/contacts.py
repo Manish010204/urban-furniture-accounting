@@ -62,6 +62,7 @@ def create_contact(
     mobile: str = Form(""),
     city: str = Form(""),
     state: str = Form(""),
+    country: str = Form(""),
     pincode: str = Form(""),
     profile_image: UploadFile | None = File(None),
     user: User = Depends(require_role("admin", "accountant")),
@@ -74,7 +75,7 @@ def create_contact(
         validate_pincode(pincode)
         contact = Contact(
             name=name.strip(), type=ContactType(type), email=email or None, mobile=mobile or None,
-            city=city or None, state=state or None, pincode=pincode or None,
+            city=city or None, state=state or None, country=country or None, pincode=pincode or None,
         )
         db.add(contact)
         db.flush()
@@ -121,6 +122,7 @@ def update_contact(
     mobile: str = Form(""),
     city: str = Form(""),
     state: str = Form(""),
+    country: str = Form(""),
     pincode: str = Form(""),
     profile_image: UploadFile | None = File(None),
     user: User = Depends(require_role("admin")),
@@ -140,6 +142,7 @@ def update_contact(
         contact.mobile = mobile or None
         contact.city = city or None
         contact.state = state or None
+        contact.country = country or None
         contact.pincode = pincode or None
         _save_profile_image(contact, profile_image)
         db.commit()

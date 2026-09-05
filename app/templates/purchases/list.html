@@ -14,11 +14,17 @@
       <tbody>
       {% for po in orders %}
         <tr>
-          <td><a href="/purchases/{{ po.id }}">PO-{{ po.id }}</a></td>
+          <td><a href="/purchases/{{ po.id }}">{{ po.number }}</a></td>
           <td>{{ po.vendor.name }}</td>
           <td>{{ po.date }}</td>
           <td class="num">₹{{ "%.2f"|format(po.total) }}</td>
-          <td>{% if po.status.value == 'billed' %}<span class="badge green">Billed</span>{% else %}<span class="badge gray">Draft</span>{% endif %}</td>
+          <td>
+            {% set s = po.status.value %}
+            {% if s == 'billed' %}<span class="badge green">Billed</span>
+            {% elif s == 'confirmed' %}<span class="badge blue">Confirmed</span>
+            {% elif s == 'cancelled' %}<span class="badge red">Cancelled</span>
+            {% else %}<span class="badge gray">Draft</span>{% endif %}
+          </td>
           <td><a class="btn small" href="/purchases/{{ po.id }}">View</a></td>
         </tr>
       {% endfor %}
@@ -39,7 +45,7 @@
       <tbody>
       {% for bill in bills %}
         <tr>
-          <td><a href="/purchases/bills/{{ bill.id }}">BILL-{{ bill.id }}</a></td>
+          <td><a href="/purchases/bills/{{ bill.id }}">{{ bill.number }}</a></td>
           <td>{{ bill.vendor.name }}</td>
           <td>{{ bill.invoice_date }}</td>
           <td>{{ bill.due_date }}</td>
@@ -48,7 +54,7 @@
           <td>
             {% if bill.status.value == 'paid' %}<span class="badge green">Paid</span>
             {% elif bill.status.value == 'partially_paid' %}<span class="badge amber">Partially Paid</span>
-            {% else %}<span class="badge gray">Unpaid</span>{% endif %}
+            {% else %}<span class="badge gray">Not Paid</span>{% endif %}
           </td>
           <td>
             {% if bill.status.value != 'paid' %}<a class="btn small primary" href="/purchases/bills/{{ bill.id }}/pay">Pay</a>{% endif %}

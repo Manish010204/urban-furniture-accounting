@@ -10,6 +10,8 @@ from app.models import (
     AnalyticAccount,
     AnalyticType,
     Budget,
+    BudgetLine,
+    BudgetStatus,
     Contact,
     ContactType,
     Journal,
@@ -19,6 +21,7 @@ from app.models import (
     User,
     UserRole,
 )
+from app.security import hash_password
 from app.services import accounting
 
 
@@ -70,11 +73,11 @@ def seed_if_empty(db: Session) -> None:
 
     # --- Contacts -----------------------------------------------------
     azure = Contact(name="Azure Furniture", type=ContactType.vendor, email="sales@azurefurniture.example",
-                     mobile="9800011122", city="Jodhpur", state="Rajasthan", pincode="342001")
+                     mobile="9800011122", city="Jodhpur", state="Rajasthan", country="India", pincode="342001")
     nimesh = Contact(name="Nimesh Pathak", type=ContactType.customer, email="nimesh.pathak@example.com",
-                      mobile="9811122233", city="Pune", state="Maharashtra", pincode="411001")
+                      mobile="9811122233", city="Pune", state="Maharashtra", country="India", pincode="411001")
     rahul = Contact(name="Rahul Sharma", type=ContactType.vendor, email="rahul.sharma@woodcraft.example",
-                     mobile="9822233344", city="Jaipur", state="Rajasthan", pincode="302001")
+                     mobile="9822233344", city="Jaipur", state="Rajasthan", country="India", pincode="302001")
     db.add_all([azure, nimesh, rahul])
     db.flush()
 
@@ -98,19 +101,25 @@ def seed_if_empty(db: Session) -> None:
     today = date.today()
     quarter_start = today.replace(day=1)
     quarter_end = quarter_start + timedelta(days=89)
-    db.add(Budget(
+    retail_budget = Budget(
         name="Q Retail Sales Budget", period_start=quarter_start, period_end=quarter_end,
-        responsible_person="Priya Verma", planned_amount=50000, analytic_account_id=retail_sales.id,
-    ))
-    db.add(Budget(
+        responsible_person="Nimesh Pathak", status=BudgetStatus.confirmed,
+    )
+    retail_budget.lines = [BudgetLine(analytic_account_id=retail_sales.id, committed_amount=50000)]
+    ops_budget = Budget(
         name="Q Store Operations Budget", period_start=quarter_start, period_end=quarter_end,
-        responsible_person="Ankit Rao", planned_amount=20000, analytic_account_id=store_ops.id,
-    ))
+        responsible_person="Rahul Sharma", status=BudgetStatus.confirmed,
+    )
+    ops_budget.lines = [BudgetLine(analytic_account_id=store_ops.id, committed_amount=20000)]
+    db.add_all([retail_budget, ops_budget])
 
-    # --- Users (demo login / role switcher) ------------------------------
-    db.add(User(name="Admin User", role=UserRole.admin))
-    db.add(User(name="Priya Verma (Accountant)", role=UserRole.accountant))
-    db.add(User(name="Nimesh Pathak (Contact)", role=UserRole.contact, contact_id=nimesh.id))
+    # --- Users (demo login credentials — see README for the full list) ----
+    db.add(User(name="Admin User", login_id="admin1", email="admin@urbanfurniture.test",
+                password_hash=hash_password("Admin@123"), role=UserRole.admin))
+    db.add(User(name="Priya Verma", login_id="priya1", email="priya@urbanfurniture.test",
+                password_hash=hash_password("Priya@123"), role=UserRole.accountant))
+    db.add(User(name="Nimesh Pathak", login_id="nimesh1", email="nimesh.user@urbanfurniture.test",
+                password_hash=hash_password("Nimesh@123"), role=UserRole.contact, contact_id=nimesh.id))
     db.flush()
 
     # --- Opening capital injection so Bank has funds to pay bills ---------

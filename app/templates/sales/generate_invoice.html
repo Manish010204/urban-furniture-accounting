@@ -1,11 +1,15 @@
 {% extends "base.html" %}
-{% block title %}Generate Invoice for SO-{{ so.id }}{% endblock %}
+{% block title %}Generate Invoice for {{ so.number }}{% endblock %}
 {% block heading %}Generate Customer Invoice{% endblock %}
 {% block content %}
 <div class="panel" style="max-width:520px;">
   <div class="panel-body">
-    <p class="help-text">SO-{{ so.id }} — {{ so.customer.name }} — Grand Total ₹{{ "%.2f"|format(so.total) }}</p>
+    <p class="help-text">{{ so.number }} — {{ so.customer.name }} — Grand Total ₹{{ "%.2f"|format(so.total) }}</p>
     <form method="post" action="/sales/{{ so.id }}/generate-invoice">
+      <div class="field">
+        <label>Invoice Reference</label>
+        <input type="text" name="reference" placeholder="e.g. internal reference note">
+      </div>
       <div class="field">
         <label>Invoice Date *</label>
         <input type="date" name="invoice_date" required value="{{ invoice_date }}">

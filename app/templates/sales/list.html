@@ -14,11 +14,17 @@
       <tbody>
       {% for so in orders %}
         <tr>
-          <td><a href="/sales/{{ so.id }}">SO-{{ so.id }}</a></td>
+          <td><a href="/sales/{{ so.id }}">{{ so.number }}</a></td>
           <td>{{ so.customer.name }}</td>
           <td>{{ so.date }}</td>
           <td class="num">₹{{ "%.2f"|format(so.total) }}</td>
-          <td>{% if so.status.value == 'invoiced' %}<span class="badge green">Invoiced</span>{% else %}<span class="badge gray">Draft</span>{% endif %}</td>
+          <td>
+            {% set s = so.status.value %}
+            {% if s == 'invoiced' %}<span class="badge green">Invoiced</span>
+            {% elif s == 'confirmed' %}<span class="badge blue">Confirmed</span>
+            {% elif s == 'cancelled' %}<span class="badge red">Cancelled</span>
+            {% else %}<span class="badge gray">Draft</span>{% endif %}
+          </td>
           <td><a class="btn small" href="/sales/{{ so.id }}">View</a></td>
         </tr>
       {% endfor %}
@@ -39,7 +45,7 @@
       <tbody>
       {% for inv in invoices %}
         <tr>
-          <td><a href="/sales/invoices/{{ inv.id }}">INV-{{ inv.id }}</a></td>
+          <td><a href="/sales/invoices/{{ inv.id }}">{{ inv.number }}</a></td>
           <td>{{ inv.customer.name }}</td>
           <td>{{ inv.invoice_date }}</td>
           <td>{{ inv.due_date }}</td>
@@ -48,7 +54,7 @@
           <td>
             {% if inv.status.value == 'paid' %}<span class="badge green">Paid</span>
             {% elif inv.status.value == 'partially_paid' %}<span class="badge amber">Partially Paid</span>
-            {% else %}<span class="badge gray">Unpaid</span>{% endif %}
+            {% else %}<span class="badge gray">Not Paid</span>{% endif %}
           </td>
           <td>
             {% if inv.status.value != 'paid' %}<a class="btn small primary" href="/sales/invoices/{{ inv.id }}/pay">Receive Payment</a>{% endif %}

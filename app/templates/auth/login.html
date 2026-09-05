@@ -4,18 +4,24 @@
 <div class="login-wrap">
   <div class="login-card">
     <h1 style="margin-top:0;font-size:20px;">Urban Furniture Accounting</h1>
-    <p class="help-text" style="margin-bottom:18px;">Prototype demo login — pick a user to sign in as. No password required.</p>
-    {% for u in users %}
-    <form method="post" action="/login/{{ u.id }}">
-      <div class="role-option">
-        <div>
-          <div class="name">{{ u.name }}</div>
-          <div class="role">{{ u.role.value|title }}{% if u.contact %} · {{ u.contact.name }}{% endif %}</div>
-        </div>
-        <button class="btn primary small" type="submit">Sign in</button>
+    {% if error %}<div class="flash error">{{ error }}</div>{% endif %}
+    {% if request.query_params.get('success') %}<div class="flash success">{{ request.query_params.get('success') }}</div>{% endif %}
+    <form method="post" action="/login">
+      <div class="field">
+        <label>Login Id</label>
+        <input type="text" name="login_id" required autofocus value="{{ login_id or '' }}">
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <input type="password" name="password" required>
+      </div>
+      <div class="btn-row">
+        <button class="btn primary" type="submit" style="width:100%;justify-content:center;">Sign In</button>
       </div>
     </form>
-    {% endfor %}
+    <p class="help-text" style="text-align:center;margin-top:16px;">
+      <a href="/forgot-password">Forgot Password</a> &nbsp;|&nbsp; <a href="/signup">Sign Up</a>
+    </p>
   </div>
 </div>
 {% endblock %}

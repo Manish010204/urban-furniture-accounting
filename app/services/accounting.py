@@ -48,7 +48,7 @@ def create_journal_entry(
     source_type: str | None = None,
     source_id: int | None = None,
 ) -> JournalEntry:
-    """lines: list of {"account": Account, "debit": float, "credit": float, "analytic_account_id": int|None}"""
+    """lines: list of {"account", "debit", "credit", "analytic_account_id"?, "partner_contact_id"?}"""
     total_debit = round(sum(l.get("debit", 0) for l in lines), 2)
     total_credit = round(sum(l.get("credit", 0) for l in lines), 2)
     if total_debit != total_credit:
@@ -76,6 +76,7 @@ def create_journal_entry(
                 debit=round(line.get("debit", 0), 2),
                 credit=round(line.get("credit", 0), 2),
                 analytic_account_id=line.get("analytic_account_id"),
+                partner_contact_id=line.get("partner_contact_id"),
             )
         )
     db.flush()
@@ -98,41 +99,46 @@ def account_balance(db: Session, account: Account) -> float:
 
 
 def post_vendor_bill(db: Session, bill, journal: Journal) -> JournalEntry:
-    purchases_expense = get_account(db, ACCOUNT_PURCHASES_EXPENSE)
+    default_expense = get_account(db, ACCOUNT_PURCHASES_EXPENSE)
     creditors = get_account(db, ACCOUNT_CREDITORS)
-    analytic_account_id = bill.purchase_order.analytic_account_id if bill.purchase_order else None
+
+    lines = []
+    for line in bill.lines:
+        account = line.account if line.account_id else default_expense
+        lines.append({
+            "account": account, "debit": line.total, "credit": 0,
+            "analytic_account_id": line.analytic_account_id,
+            "partner_contact_id": bill.vendor_id,
+        })
+    lines.append({"account": creditors, "debit": 0, "credit": bill.total, "partner_contact_id": bill.vendor_id})
+
     entry = create_journal_entry(
-        db,
-        journal,
-        bill.invoice_date,
-        f"Vendor Bill #{bill.id}",
-        [
-            {"account": purchases_expense, "debit": bill.total, "credit": 0, "analytic_account_id": analytic_account_id},
-            {"account": creditors, "debit": 0, "credit": bill.total},
-        ],
-        source_type="vendor_bill",
-        source_id=bill.id,
+        db, journal, bill.invoice_date, f"Vendor Bill {bill.number}", lines,
+        source_type="vendor_bill", source_id=bill.id,
     )
     return entry
 
 
 def post_customer_invoice(db: Session, invoice, journal: Journal) -> JournalEntry:
+    default_income = get_account(db, ACCOUNT_SALES_INCOME)
     debtors = get_account(db, ACCOUNT_DEBTORS)
-    sales_income = get_account(db, ACCOUNT_SALES_INCOME)
-    analytic_account_id = invoice.sales_order.analytic_account_id if invoice.sales_order else None
-    lines = [{"account": debtors, "debit": invoice.total, "credit": 0}]
-    lines.append({"account": sales_income, "debit": 0, "credit": invoice.subtotal, "analytic_account_id": analytic_account_id})
+
+    lines = [{"account": debtors, "debit": invoice.total, "credit": 0, "partner_contact_id": invoice.customer_id}]
+    for line in invoice.lines:
+        account = line.account if line.account_id else default_income
+        lines.append({
+            "account": account, "debit": 0, "credit": line.subtotal,
+            "analytic_account_id": line.analytic_account_id,
+            "partner_contact_id": invoice.customer_id,
+        })
     if invoice.tax_amount > 0:
         tax_payable = get_account(db, ACCOUNT_TAX_PAYABLE)
-        lines.append({"account": tax_payable, "debit": 0, "credit": invoice.tax_amount})
+        lines.append({"account": tax_payable, "debit": 0, "credit": invoice.tax_amount,
+                      "partner_contact_id": invoice.customer_id})
+
     entry = create_journal_entry(
-        db,
-        journal,
-        invoice.invoice_date,
-        f"Customer Invoice #{invoice.id}",
-        lines,
-        source_type="customer_invoice",
-        source_id=invoice.id,
+        db, journal, invoice.invoice_date, f"Customer Invoice {invoice.number}", lines,
+        source_type="customer_invoice", source_id=invoice.id,
     )
     return entry
 
@@ -146,8 +152,8 @@ def post_vendor_payment(db: Session, payment, journal: Journal) -> JournalEntry:
         payment.date,
         f"Vendor Payment #{payment.id}",
         [
-            {"account": creditors, "debit": payment.amount, "credit": 0},
-            {"account": cash_or_bank, "debit": 0, "credit": payment.amount},
+            {"account": creditors, "debit": payment.amount, "credit": 0, "partner_contact_id": payment.party_contact_id},
+            {"account": cash_or_bank, "debit": 0, "credit": payment.amount, "partner_contact_id": payment.party_contact_id},
         ],
         source_type="payment",
         source_id=payment.id,
@@ -164,8 +170,8 @@ def post_customer_payment(db: Session, payment, journal: Journal) -> JournalEntr
         payment.date,
         f"Customer Payment #{payment.id}",
         [
-            {"account": cash_or_bank, "debit": payment.amount, "credit": 0},
-            {"account": debtors, "debit": 0, "credit": payment.amount},
+            {"account": cash_or_bank, "debit": payment.amount, "credit": 0, "partner_contact_id": payment.party_contact_id},
+            {"account": debtors, "debit": 0, "credit": payment.amount, "partner_contact_id": payment.party_contact_id},
         ],
         source_type="payment",
         source_id=payment.id,

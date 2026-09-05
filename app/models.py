@@ -60,7 +60,9 @@ class AnalyticType(str, enum.Enum):
 
 class POStatus(str, enum.Enum):
     draft = "draft"
+    confirmed = "confirmed"
     billed = "billed"
+    cancelled = "cancelled"
 
 
 class BillStatus(str, enum.Enum):
@@ -71,7 +73,9 @@ class BillStatus(str, enum.Enum):
 
 class SOStatus(str, enum.Enum):
     draft = "draft"
+    confirmed = "confirmed"
     invoiced = "invoiced"
+    cancelled = "cancelled"
 
 
 class InvoiceStatus(str, enum.Enum):
@@ -90,6 +94,13 @@ class PaymentDirection(str, enum.Enum):
     outbound = "outbound"
 
 
+class BudgetStatus(str, enum.Enum):
+    draft = "draft"
+    confirmed = "confirmed"
+    revised = "revised"
+    cancelled = "cancelled"
+
+
 # ---------------------------------------------------------------------------
 # Users / auth
 # ---------------------------------------------------------------------------
@@ -99,6 +110,9 @@ class User(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String(120))
+    login_id: Mapped[str] = mapped_column(String(12), unique=True)
+    email: Mapped[str] = mapped_column(String(150), unique=True)
+    password_hash: Mapped[str] = mapped_column(String(255))
     role: Mapped[UserRole] = mapped_column(Enum(UserRole))
     contact_id: Mapped[int | None] = mapped_column(ForeignKey("contacts.id"), nullable=True)
 
@@ -119,6 +133,7 @@ class Contact(Base):
     mobile: Mapped[str | None] = mapped_column(String(30), nullable=True)
     city: Mapped[str | None] = mapped_column(String(100), nullable=True)
     state: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    country: Mapped[str | None] = mapped_column(String(100), nullable=True)
     pincode: Mapped[str | None] = mapped_column(String(15), nullable=True)
     profile_image_path: Mapped[str | None] = mapped_column(String(255), nullable=True)
     is_archived: Mapped[bool] = mapped_column(default=False)
@@ -136,6 +151,7 @@ class Product(Base):
     sales_price: Mapped[float] = mapped_column(Float, default=0)
     cost_price: Mapped[float] = mapped_column(Float, default=0)
     category: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    image_path: Mapped[str | None] = mapped_column(String(255), nullable=True)
     is_archived: Mapped[bool] = mapped_column(default=False)
 
 
@@ -183,6 +199,13 @@ class JournalEntry(Base):
     def total_credit(self) -> float:
         return round(sum(l.credit for l in self.lines), 2)
 
+    @property
+    def partner(self) -> "Contact | None":
+        for line in self.lines:
+            if line.partner_contact_id:
+                return line.partner_contact
+        return None
+
 
 class JournalEntryLine(Base):
     __tablename__ = "journal_entry_lines"
@@ -193,10 +216,12 @@ class JournalEntryLine(Base):
     debit: Mapped[float] = mapped_column(Float, default=0)
     credit: Mapped[float] = mapped_column(Float, default=0)
     analytic_account_id: Mapped[int | None] = mapped_column(ForeignKey("analytic_accounts.id"), nullable=True)
+    partner_contact_id: Mapped[int | None] = mapped_column(ForeignKey("contacts.id"), nullable=True)
 
     entry: Mapped["JournalEntry"] = relationship(back_populates="lines")
     account: Mapped["Account"] = relationship()
     analytic_account: Mapped["AnalyticAccount | None"] = relationship()
+    partner_contact: Mapped["Contact | None"] = relationship()
 
 
 class AnalyticAccount(Base):
@@ -208,6 +233,12 @@ class AnalyticAccount(Base):
 
 
 class Budget(Base):
+    """A budget is a named period with one or more analytic-account lines
+    (each carrying a committed amount). Confirming a budget freezes it for
+    reporting; revising it clones a new confirmed budget with new committed
+    amounts and freezes the original into "revised" state, linked via
+    revises_budget_id."""
+
     __tablename__ = "budgets"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -215,10 +246,31 @@ class Budget(Base):
     period_start: Mapped[date_type] = mapped_column(Date)
     period_end: Mapped[date_type] = mapped_column(Date)
     responsible_person: Mapped[str] = mapped_column(String(150))
-    planned_amount: Mapped[float] = mapped_column(Float, default=0)
-    analytic_account_id: Mapped[int] = mapped_column(ForeignKey("analytic_accounts.id"))
+    status: Mapped[BudgetStatus] = mapped_column(Enum(BudgetStatus), default=BudgetStatus.draft)
+    revises_budget_id: Mapped[int | None] = mapped_column(ForeignKey("budgets.id"), nullable=True)
 
+    revises_budget: Mapped["Budget | None"] = relationship(remote_side=[id])
+    lines: Mapped[list["BudgetLine"]] = relationship(back_populates="budget", cascade="all, delete-orphan")
+
+    @property
+    def planned_amount(self) -> float:
+        return round(sum(l.committed_amount for l in self.lines), 2)
+
+
+class BudgetLine(Base):
+    __tablename__ = "budget_lines"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    budget_id: Mapped[int] = mapped_column(ForeignKey("budgets.id"))
+    analytic_account_id: Mapped[int] = mapped_column(ForeignKey("analytic_accounts.id"))
+    committed_amount: Mapped[float] = mapped_column(Float, default=0)
+
+    budget: Mapped["Budget"] = relationship(back_populates="lines")
     analytic_account: Mapped["AnalyticAccount"] = relationship()
+
+    @property
+    def type(self) -> AnalyticType:
+        return self.analytic_account.type
 
 
 # ---------------------------------------------------------------------------
@@ -232,12 +284,14 @@ class PurchaseOrder(Base):
     vendor_id: Mapped[int] = mapped_column(ForeignKey("contacts.id"))
     date: Mapped[date_type] = mapped_column(Date, default=date_type.today)
     status: Mapped[POStatus] = mapped_column(Enum(POStatus), default=POStatus.draft)
-    analytic_account_id: Mapped[int | None] = mapped_column(ForeignKey("analytic_accounts.id"), nullable=True)
 
     vendor: Mapped["Contact"] = relationship()
-    analytic_account: Mapped["AnalyticAccount | None"] = relationship()
     lines: Mapped[list["PurchaseOrderLine"]] = relationship(back_populates="po", cascade="all, delete-orphan")
     bill: Mapped["VendorBill | None"] = relationship(back_populates="purchase_order", uselist=False)
+
+    @property
+    def number(self) -> str:
+        return f"P{self.id:05d}"
 
     @property
     def total(self) -> float:
@@ -252,9 +306,11 @@ class PurchaseOrderLine(Base):
     product_id: Mapped[int] = mapped_column(ForeignKey("products.id"))
     qty: Mapped[float] = mapped_column(Float, default=1)
     unit_price: Mapped[float] = mapped_column(Float, default=0)
+    analytic_account_id: Mapped[int | None] = mapped_column(ForeignKey("analytic_accounts.id"), nullable=True)
 
     po: Mapped["PurchaseOrder"] = relationship(back_populates="lines")
     product: Mapped["Product"] = relationship()
+    analytic_account: Mapped["AnalyticAccount | None"] = relationship()
 
     @property
     def total(self) -> float:
@@ -265,18 +321,27 @@ class VendorBill(Base):
     __tablename__ = "vendor_bills"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    purchase_order_id: Mapped[int] = mapped_column(ForeignKey("purchase_orders.id"))
+    purchase_order_id: Mapped[int | None] = mapped_column(ForeignKey("purchase_orders.id"), nullable=True)
     vendor_id: Mapped[int] = mapped_column(ForeignKey("contacts.id"))
+    reference: Mapped[str | None] = mapped_column(String(150), nullable=True)
     invoice_date: Mapped[date_type] = mapped_column(Date, default=date_type.today)
     due_date: Mapped[date_type] = mapped_column(Date)
-    total: Mapped[float] = mapped_column(Float, default=0)
     status: Mapped[BillStatus] = mapped_column(Enum(BillStatus), default=BillStatus.unpaid)
     journal_entry_id: Mapped[int | None] = mapped_column(ForeignKey("journal_entries.id"), nullable=True)
 
-    purchase_order: Mapped["PurchaseOrder"] = relationship(back_populates="bill")
+    purchase_order: Mapped["PurchaseOrder | None"] = relationship(back_populates="bill")
     vendor: Mapped["Contact"] = relationship()
     journal_entry: Mapped["JournalEntry | None"] = relationship()
     payments: Mapped[list["Payment"]] = relationship(back_populates="vendor_bill")
+    lines: Mapped[list["VendorBillLine"]] = relationship(back_populates="bill", cascade="all, delete-orphan")
+
+    @property
+    def number(self) -> str:
+        return f"Bill/{self.invoice_date.year}/{self.id:04d}"
+
+    @property
+    def total(self) -> float:
+        return round(sum(l.total for l in self.lines), 2)
 
     @property
     def amount_paid(self) -> float:
@@ -285,6 +350,27 @@ class VendorBill(Base):
     @property
     def amount_due(self) -> float:
         return round(self.total - self.amount_paid, 2)
+
+
+class VendorBillLine(Base):
+    __tablename__ = "vendor_bill_lines"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    bill_id: Mapped[int] = mapped_column(ForeignKey("vendor_bills.id"))
+    product_id: Mapped[int] = mapped_column(ForeignKey("products.id"))
+    account_id: Mapped[int | None] = mapped_column(ForeignKey("accounts.id"), nullable=True)
+    analytic_account_id: Mapped[int | None] = mapped_column(ForeignKey("analytic_accounts.id"), nullable=True)
+    qty: Mapped[float] = mapped_column(Float, default=1)
+    unit_price: Mapped[float] = mapped_column(Float, default=0)
+
+    bill: Mapped["VendorBill"] = relationship(back_populates="lines")
+    product: Mapped["Product"] = relationship()
+    account: Mapped["Account | None"] = relationship()
+    analytic_account: Mapped["AnalyticAccount | None"] = relationship()
+
+    @property
+    def total(self) -> float:
+        return round(self.qty * self.unit_price, 2)
 
 
 # ---------------------------------------------------------------------------
@@ -298,12 +384,14 @@ class SalesOrder(Base):
     customer_id: Mapped[int] = mapped_column(ForeignKey("contacts.id"))
     date: Mapped[date_type] = mapped_column(Date, default=date_type.today)
     status: Mapped[SOStatus] = mapped_column(Enum(SOStatus), default=SOStatus.draft)
-    analytic_account_id: Mapped[int | None] = mapped_column(ForeignKey("analytic_accounts.id"), nullable=True)
 
     customer: Mapped["Contact"] = relationship()
-    analytic_account: Mapped["AnalyticAccount | None"] = relationship()
     lines: Mapped[list["SalesOrderLine"]] = relationship(back_populates="so", cascade="all, delete-orphan")
     invoice: Mapped["CustomerInvoice | None"] = relationship(back_populates="sales_order", uselist=False)
+
+    @property
+    def number(self) -> str:
+        return f"S{self.id:05d}"
 
     @property
     def subtotal(self) -> float:
@@ -327,9 +415,11 @@ class SalesOrderLine(Base):
     qty: Mapped[float] = mapped_column(Float, default=1)
     unit_price: Mapped[float] = mapped_column(Float, default=0)
     tax_percent: Mapped[float] = mapped_column(Float, default=0)
+    analytic_account_id: Mapped[int | None] = mapped_column(ForeignKey("analytic_accounts.id"), nullable=True)
 
     so: Mapped["SalesOrder"] = relationship(back_populates="lines")
     product: Mapped["Product"] = relationship()
+    analytic_account: Mapped["AnalyticAccount | None"] = relationship()
 
     @property
     def subtotal(self) -> float:
@@ -348,20 +438,35 @@ class CustomerInvoice(Base):
     __tablename__ = "customer_invoices"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    sales_order_id: Mapped[int] = mapped_column(ForeignKey("sales_orders.id"))
+    sales_order_id: Mapped[int | None] = mapped_column(ForeignKey("sales_orders.id"), nullable=True)
     customer_id: Mapped[int] = mapped_column(ForeignKey("contacts.id"))
+    reference: Mapped[str | None] = mapped_column(String(150), nullable=True)
     invoice_date: Mapped[date_type] = mapped_column(Date, default=date_type.today)
     due_date: Mapped[date_type] = mapped_column(Date)
-    subtotal: Mapped[float] = mapped_column(Float, default=0)
-    tax_amount: Mapped[float] = mapped_column(Float, default=0)
-    total: Mapped[float] = mapped_column(Float, default=0)
     status: Mapped[InvoiceStatus] = mapped_column(Enum(InvoiceStatus), default=InvoiceStatus.unpaid)
     journal_entry_id: Mapped[int | None] = mapped_column(ForeignKey("journal_entries.id"), nullable=True)
 
-    sales_order: Mapped["SalesOrder"] = relationship(back_populates="invoice")
+    sales_order: Mapped["SalesOrder | None"] = relationship(back_populates="invoice")
     customer: Mapped["Contact"] = relationship()
     journal_entry: Mapped["JournalEntry | None"] = relationship()
     payments: Mapped[list["Payment"]] = relationship(back_populates="customer_invoice")
+    lines: Mapped[list["CustomerInvoiceLine"]] = relationship(back_populates="invoice", cascade="all, delete-orphan")
+
+    @property
+    def number(self) -> str:
+        return f"INV/{self.invoice_date.year}/{self.id:04d}"
+
+    @property
+    def subtotal(self) -> float:
+        return round(sum(l.subtotal for l in self.lines), 2)
+
+    @property
+    def tax_amount(self) -> float:
+        return round(sum(l.tax_amount for l in self.lines), 2)
+
+    @property
+    def total(self) -> float:
+        return round(self.subtotal + self.tax_amount, 2)
 
     @property
     def amount_paid(self) -> float:
@@ -370,6 +475,36 @@ class CustomerInvoice(Base):
     @property
     def amount_due(self) -> float:
         return round(self.total - self.amount_paid, 2)
+
+
+class CustomerInvoiceLine(Base):
+    __tablename__ = "customer_invoice_lines"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    invoice_id: Mapped[int] = mapped_column(ForeignKey("customer_invoices.id"))
+    product_id: Mapped[int] = mapped_column(ForeignKey("products.id"))
+    account_id: Mapped[int | None] = mapped_column(ForeignKey("accounts.id"), nullable=True)
+    analytic_account_id: Mapped[int | None] = mapped_column(ForeignKey("analytic_accounts.id"), nullable=True)
+    qty: Mapped[float] = mapped_column(Float, default=1)
+    unit_price: Mapped[float] = mapped_column(Float, default=0)
+    tax_percent: Mapped[float] = mapped_column(Float, default=0)
+
+    invoice: Mapped["CustomerInvoice"] = relationship(back_populates="lines")
+    product: Mapped["Product"] = relationship()
+    account: Mapped["Account | None"] = relationship()
+    analytic_account: Mapped["AnalyticAccount | None"] = relationship()
+
+    @property
+    def subtotal(self) -> float:
+        return round(self.qty * self.unit_price, 2)
+
+    @property
+    def tax_amount(self) -> float:
+        return round(self.subtotal * self.tax_percent / 100, 2)
+
+    @property
+    def total(self) -> float:
+        return round(self.subtotal + self.tax_amount, 2)
 
 
 class Payment(Base):
@@ -381,6 +516,7 @@ class Payment(Base):
     method: Mapped[PaymentMethod] = mapped_column(Enum(PaymentMethod))
     amount: Mapped[float] = mapped_column(Float)
     date: Mapped[date_type] = mapped_column(Date, default=date_type.today)
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
     vendor_bill_id: Mapped[int | None] = mapped_column(ForeignKey("vendor_bills.id"), nullable=True)
     customer_invoice_id: Mapped[int | None] = mapped_column(ForeignKey("customer_invoices.id"), nullable=True)
     journal_entry_id: Mapped[int | None] = mapped_column(ForeignKey("journal_entries.id"), nullable=True)
