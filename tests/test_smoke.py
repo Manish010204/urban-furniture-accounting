@@ -104,3 +104,54 @@ def test_reports_render_with_data(client):
     for page in ["/reports/balance-sheet", "/reports/profit-loss", "/reports/budget"]:
         r = client.get(page)
         assert r.status_code == 200
+
+
+def test_contact_profile_image_upload(client):
+    import base64
+    login(client)
+    # 1x1 transparent PNG
+    png_bytes = base64.b64decode(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
+    )
+    r = client.post(
+        "/contacts/new",
+        data={"name": "Avatar Test Contact", "type": "customer"},
+        files={"profile_image": ("avatar.png", png_bytes, "image/png")},
+        follow_redirects=True,
+    )
+    assert r.status_code == 200
+    assert "/static/uploads/contacts/" in r.text
+
+
+def test_archived_vendor_rejected_in_new_purchase_order(client):
+    login(client)
+    r = client.post("/contacts/new", data={
+        "name": "Archived Vendor Co", "type": "vendor",
+    }, follow_redirects=True)
+    vendor_id = int(r.url.path.rstrip("/").split("/")[-1])
+    client.post(f"/contacts/{vendor_id}/archive", follow_redirects=True)
+
+    r = client.post("/purchases/new", data={
+        "vendor_id": str(vendor_id), "date": "2026-01-15",
+        "product_id": ["1"], "qty": ["1"], "unit_price": ["100"],
+    }, follow_redirects=True)
+    assert r.status_code == 400
+    assert "active vendor" in r.text
+
+
+def test_vendor_bill_overpayment_rejected(client):
+    import re
+    login(client)
+    r = client.post("/purchases/new", data={
+        "vendor_id": "1", "date": "2026-01-20",
+        "product_id": ["1"], "qty": ["1"], "unit_price": ["2800"],
+    }, follow_redirects=True)
+    po_id = max(int(m) for m in re.findall(r"PO-(\d+)", r.text))
+    r = client.post(f"/purchases/{po_id}/convert",
+                     data={"invoice_date": "2026-01-21", "due_date": "2026-02-05"}, follow_redirects=True)
+    bill_id = max(int(m) for m in re.findall(r"BILL-(\d+)", r.text))
+
+    r = client.post(f"/purchases/bills/{bill_id}/pay", data={"amount": "999999", "method": "bank"},
+                     follow_redirects=True)
+    assert r.status_code == 400
+    assert "cannot exceed" in r.text

@@ -5,11 +5,18 @@
 <div class="panel">
   <div class="panel-body" style="max-width:640px;">
     {% if error %}<div class="flash error">{{ error }}</div>{% endif %}
-    <form method="post" action="{{ '/contacts/%d/edit'|format(contact.id) if contact else '/contacts/new' }}">
+    <form method="post" enctype="multipart/form-data" action="{{ '/contacts/%d/edit'|format(contact.id) if contact else '/contacts/new' }}">
       <div class="form-grid">
         <div class="field full">
           <label>Name *</label>
           <input type="text" name="name" required value="{{ contact.name if contact else (form.name if form is defined else '') }}">
+        </div>
+        <div class="field full">
+          <label>Profile Image</label>
+          {% if contact and contact.profile_image_path %}
+          <div style="margin-bottom:8px;"><img src="{{ contact.profile_image_path }}" alt="" style="width:56px;height:56px;border-radius:50%;object-fit:cover;"></div>
+          {% endif %}
+          <input type="file" name="profile_image" accept="image/*">
         </div>
         <div class="field">
           <label>Type *</label>

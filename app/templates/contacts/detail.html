@@ -17,6 +17,9 @@
       </div>
     </div>
     <div class="panel-body">
+      {% if contact.profile_image_path %}
+      <img src="{{ contact.profile_image_path }}" alt="" style="width:64px;height:64px;border-radius:50%;object-fit:cover;margin-bottom:12px;">
+      {% endif %}
       <div class="kv"><span class="k">Type</span><span class="v">{{ contact.type.value|title }}</span></div>
       <div class="kv"><span class="k">Email</span><span class="v">{{ contact.email or '—' }}</span></div>
       <div class="kv"><span class="k">Mobile</span><span class="v">{{ contact.mobile or '—' }}</span></div>

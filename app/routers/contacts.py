@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, Form, Request
+import os
+
+from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
 from fastapi.responses import RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -10,6 +12,21 @@ from app.templating import templates
 from app.validators import ValidationError, validate_email, validate_pincode
 
 router = APIRouter(prefix="/contacts", tags=["contacts"])
+
+UPLOAD_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "static", "uploads", "contacts")
+
+
+def _save_profile_image(contact: Contact, profile_image: UploadFile | None) -> None:
+    if not profile_image or not profile_image.filename:
+        return
+    ext = os.path.splitext(profile_image.filename)[1].lower() or ".jpg"
+    if ext not in (".jpg", ".jpeg", ".png", ".webp", ".gif"):
+        raise ValidationError("Profile image must be a JPG, PNG, WEBP, or GIF file.")
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
+    filename = f"{contact.id}{ext}"
+    with open(os.path.join(UPLOAD_DIR, filename), "wb") as f:
+        f.write(profile_image.file.read())
+    contact.profile_image_path = f"/static/uploads/contacts/{filename}"
 
 
 @router.get("")
@@ -46,6 +63,7 @@ def create_contact(
     city: str = Form(""),
     state: str = Form(""),
     pincode: str = Form(""),
+    profile_image: UploadFile | None = File(None),
     user: User = Depends(require_role("admin", "accountant")),
     db: Session = Depends(get_db),
 ):
@@ -59,6 +77,8 @@ def create_contact(
             city=city or None, state=state or None, pincode=pincode or None,
         )
         db.add(contact)
+        db.flush()
+        _save_profile_image(contact, profile_image)
         db.commit()
     except ValidationError as e:
         return templates.TemplateResponse("contacts/form.html", {
@@ -102,6 +122,7 @@ def update_contact(
     city: str = Form(""),
     state: str = Form(""),
     pincode: str = Form(""),
+    profile_image: UploadFile | None = File(None),
     user: User = Depends(require_role("admin")),
     db: Session = Depends(get_db),
 ):
@@ -120,6 +141,7 @@ def update_contact(
         contact.city = city or None
         contact.state = state or None
         contact.pincode = pincode or None
+        _save_profile_image(contact, profile_image)
         db.commit()
     except ValidationError as e:
         return templates.TemplateResponse("contacts/form.html", {

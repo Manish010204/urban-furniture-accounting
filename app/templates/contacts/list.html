@@ -29,7 +29,14 @@
       <tbody>
       {% for c in contacts %}
         <tr>
-          <td><a href="/contacts/{{ c.id }}">{{ c.name }}</a></td>
+          <td style="display:flex;align-items:center;gap:10px;">
+            {% if c.profile_image_path %}
+            <img src="{{ c.profile_image_path }}" alt="" style="width:28px;height:28px;border-radius:50%;object-fit:cover;">
+            {% else %}
+            <span class="avatar" style="width:28px;height:28px;font-size:11px;">{{ c.name[0] }}</span>
+            {% endif %}
+            <a href="/contacts/{{ c.id }}">{{ c.name }}</a>
+          </td>
           <td><span class="badge blue">{{ c.type.value|title }}</span></td>
           <td>{{ c.email or '—' }}</td>
           <td>{{ c.mobile or '—' }}</td>
