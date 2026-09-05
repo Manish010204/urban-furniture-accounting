@@ -5,11 +5,18 @@
 <div class="panel">
   <div class="panel-body" style="max-width:640px;">
     {% if error %}<div class="flash error">{{ error }}</div>{% endif %}
-    <form method="post" action="{{ '/products/%d/edit'|format(product.id) if product else '/products/new' }}">
+    <form method="post" enctype="multipart/form-data" action="{{ '/products/%d/edit'|format(product.id) if product else '/products/new' }}">
       <div class="form-grid">
         <div class="field full">
           <label>Product Name *</label>
           <input type="text" name="name" required value="{{ product.name if product else '' }}">
+        </div>
+        <div class="field full">
+          <label>Upload Image</label>
+          {% if product and product.image_path %}
+          <div style="margin-bottom:8px;"><img src="{{ product.image_path }}" alt="" style="width:56px;height:56px;border-radius:8px;object-fit:cover;"></div>
+          {% endif %}
+          <input type="file" name="image" accept="image/*">
         </div>
         <div class="field">
           <label>Type *</label>

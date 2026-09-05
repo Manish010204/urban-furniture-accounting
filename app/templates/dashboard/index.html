@@ -38,6 +38,33 @@
   </div>
 </div>
 
+<div class="quickstatus-row">
+  <div class="panel">
+    <div class="panel-header"><h2>Sales</h2><a class="btn small primary" href="/sales/new">+ New</a></div>
+    <div class="panel-body quickstatus-body">
+      <a class="qs-item" href="/sales"><div class="qs-value">{{ sales_counts.all }}</div><div class="qs-label">All</div></a>
+      <a class="qs-item" href="/sales"><div class="qs-value">{{ sales_counts.confirmed }}</div><div class="qs-label">Confirmed</div></a>
+      <a class="qs-item" href="/sales"><div class="qs-value">{{ sales_counts.draft }}</div><div class="qs-label">Draft</div></a>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-header"><h2>Purchase</h2><a class="btn small primary" href="/purchases/new">+ New</a></div>
+    <div class="panel-body quickstatus-body">
+      <a class="qs-item" href="/purchases"><div class="qs-value">{{ purchase_counts.all }}</div><div class="qs-label">All</div></a>
+      <a class="qs-item" href="/purchases"><div class="qs-value">{{ purchase_counts.confirmed }}</div><div class="qs-label">Confirmed</div></a>
+      <a class="qs-item" href="/purchases"><div class="qs-value">{{ purchase_counts.draft }}</div><div class="qs-label">Draft</div></a>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-header"><h2>Budget Reports</h2><a class="btn small primary" href="/reports/budget">Report</a></div>
+    <div class="panel-body quickstatus-body">
+      <a class="qs-item" href="/budgets"><div class="qs-value">{{ budget_counts.all }}</div><div class="qs-label">All</div></a>
+      <a class="qs-item" href="/budgets"><div class="qs-value">{{ budget_counts.confirmed }}</div><div class="qs-label">Confirmed</div></a>
+      <a class="qs-item" href="/budgets"><div class="qs-value">{{ budget_counts.draft }}</div><div class="qs-label">Draft</div></a>
+    </div>
+  </div>
+</div>
+
 <div class="grid-2">
   <div class="panel">
     <div class="panel-header"><h2>Recent Customer Invoices</h2><a class="btn small" href="/sales">View all</a></div>

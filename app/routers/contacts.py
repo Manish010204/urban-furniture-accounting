@@ -30,7 +30,7 @@ def _save_profile_image(contact: Contact, profile_image: UploadFile | None) -> N
 
 
 @router.get("")
-def list_contacts(request: Request, q: str = "", type: str = "", show_archived: bool = False,
+def list_contacts(request: Request, q: str = "", type: str = "", show_archived: bool = False, view: str = "list",
                    user: User = Depends(require_role("admin", "accountant")), db: Session = Depends(get_db)):
     stmt = select(Contact)
     if not show_archived:
@@ -42,7 +42,7 @@ def list_contacts(request: Request, q: str = "", type: str = "", show_archived: 
     contacts = db.scalars(stmt.order_by(Contact.name)).all()
     return templates.TemplateResponse("contacts/list.html", {
         "request": request, "user": user, "active": "contacts",
-        "contacts": contacts, "q": q, "type": type, "show_archived": show_archived,
+        "contacts": contacts, "q": q, "type": type, "show_archived": show_archived, "view": view,
     })
 
 

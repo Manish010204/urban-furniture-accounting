@@ -16,6 +16,9 @@
     </div>
   </div>
   <div class="panel-body">
+    {% if product.image_path %}
+    <img src="{{ product.image_path }}" alt="" style="width:64px;height:64px;border-radius:8px;object-fit:cover;margin-bottom:12px;">
+    {% endif %}
     <div class="kv"><span class="k">Type</span><span class="v">{{ product.type.value|title }}</span></div>
     <div class="kv"><span class="k">Category</span><span class="v">{{ product.category or '—' }}</span></div>
     <div class="kv"><span class="k">Sales Price</span><span class="v">₹{{ "%.2f"|format(product.sales_price) }}</span></div>

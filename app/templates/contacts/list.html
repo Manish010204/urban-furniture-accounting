@@ -20,33 +20,60 @@
         <label style="display:flex;align-items:center;gap:6px;font-weight:400;">
           <input type="checkbox" name="show_archived" value="true" style="width:auto;" {{ 'checked' if show_archived }}> Show archived
         </label>
+        <input type="hidden" name="view" value="{{ view }}">
         <button class="btn small" type="submit">Filter</button>
       </form>
+      <span class="spacer"></span>
+      <div class="view-toggle">
+        <a class="btn small {{ 'primary' if view != 'kanban' }}" href="?q={{ q }}&type={{ type }}&show_archived={{ show_archived }}&view=list">☰ List</a>
+        <a class="btn small {{ 'primary' if view == 'kanban' }}" href="?q={{ q }}&type={{ type }}&show_archived={{ show_archived }}&view=kanban">▦ Kanban</a>
+      </div>
     </div>
     {% if contacts %}
-    <table>
-      <thead><tr><th>Name</th><th>Type</th><th>Email</th><th>Mobile</th><th>City</th><th>Status</th><th></th></tr></thead>
-      <tbody>
-      {% for c in contacts %}
-        <tr>
-          <td style="display:flex;align-items:center;gap:10px;">
-            {% if c.profile_image_path %}
-            <img src="{{ c.profile_image_path }}" alt="" style="width:28px;height:28px;border-radius:50%;object-fit:cover;">
-            {% else %}
-            <span class="avatar" style="width:28px;height:28px;font-size:11px;">{{ c.name[0] }}</span>
-            {% endif %}
-            <a href="/contacts/{{ c.id }}">{{ c.name }}</a>
-          </td>
-          <td><span class="badge blue">{{ c.type.value|title }}</span></td>
-          <td>{{ c.email or '—' }}</td>
-          <td>{{ c.mobile or '—' }}</td>
-          <td>{{ c.city or '—' }}</td>
-          <td>{% if c.is_archived %}<span class="badge red">Archived</span>{% else %}<span class="badge green">Active</span>{% endif %}</td>
-          <td><a class="btn small" href="/contacts/{{ c.id }}">View</a></td>
-        </tr>
-      {% endfor %}
-      </tbody>
-    </table>
+      {% if view == 'kanban' %}
+      <div class="kanban-grid">
+        {% for c in contacts %}
+        <a class="kanban-card" href="/contacts/{{ c.id }}">
+          {% if c.profile_image_path %}
+          <img src="{{ c.profile_image_path }}" alt="" class="kanban-avatar">
+          {% else %}
+          <span class="avatar kanban-avatar-fallback">{{ c.name[0] }}</span>
+          {% endif %}
+          <div class="kanban-card-body">
+            <div class="kanban-card-title">{{ c.name }}</div>
+            <div class="kanban-card-sub">{{ c.email or '—' }}</div>
+            <div class="kanban-card-sub">{{ c.mobile or '—' }}</div>
+            <span class="badge blue">{{ c.type.value|title }}</span>
+            {% if c.is_archived %}<span class="badge red">Archived</span>{% endif %}
+          </div>
+        </a>
+        {% endfor %}
+      </div>
+      {% else %}
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Email</th><th>Mobile</th><th>City</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+        {% for c in contacts %}
+          <tr>
+            <td style="display:flex;align-items:center;gap:10px;">
+              {% if c.profile_image_path %}
+              <img src="{{ c.profile_image_path }}" alt="" style="width:28px;height:28px;border-radius:50%;object-fit:cover;">
+              {% else %}
+              <span class="avatar" style="width:28px;height:28px;font-size:11px;">{{ c.name[0] }}</span>
+              {% endif %}
+              <a href="/contacts/{{ c.id }}">{{ c.name }}</a>
+            </td>
+            <td><span class="badge blue">{{ c.type.value|title }}</span></td>
+            <td>{{ c.email or '—' }}</td>
+            <td>{{ c.mobile or '—' }}</td>
+            <td>{{ c.city or '—' }}</td>
+            <td>{% if c.is_archived %}<span class="badge red">Archived</span>{% else %}<span class="badge green">Active</span>{% endif %}</td>
+            <td><a class="btn small" href="/contacts/{{ c.id }}">View</a></td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
     {% else %}
       <div class="empty-state"><div class="icon">👤</div>No contacts match your filters.</div>
     {% endif %}

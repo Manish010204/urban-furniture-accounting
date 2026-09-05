@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, Form, Request
+import os
+
+from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
 from fastapi.responses import RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -11,9 +13,24 @@ from app.validators import ValidationError
 
 router = APIRouter(prefix="/products", tags=["products"])
 
+UPLOAD_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "static", "uploads", "products")
+
+
+def _save_product_image(product: Product, image: UploadFile | None) -> None:
+    if not image or not image.filename:
+        return
+    ext = os.path.splitext(image.filename)[1].lower() or ".jpg"
+    if ext not in (".jpg", ".jpeg", ".png", ".webp", ".gif"):
+        raise ValidationError("Product image must be a JPG, PNG, WEBP, or GIF file.")
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
+    filename = f"{product.id}{ext}"
+    with open(os.path.join(UPLOAD_DIR, filename), "wb") as f:
+        f.write(image.file.read())
+    product.image_path = f"/static/uploads/products/{filename}"
+
 
 @router.get("")
-def list_products(request: Request, q: str = "", type: str = "", show_archived: bool = False,
+def list_products(request: Request, q: str = "", type: str = "", show_archived: bool = False, view: str = "list",
                    user: User = Depends(require_role("admin", "accountant")), db: Session = Depends(get_db)):
     stmt = select(Product)
     if not show_archived:
@@ -25,7 +42,7 @@ def list_products(request: Request, q: str = "", type: str = "", show_archived: 
     products = db.scalars(stmt.order_by(Product.name)).all()
     return templates.TemplateResponse("products/list.html", {
         "request": request, "user": user, "active": "products",
-        "products": products, "q": q, "type": type, "show_archived": show_archived,
+        "products": products, "q": q, "type": type, "show_archived": show_archived, "view": view,
     })
 
 
@@ -44,6 +61,7 @@ def create_product(
     sales_price: float = Form(...),
     cost_price: float = Form(...),
     category: str = Form(""),
+    image: UploadFile | None = File(None),
     user: User = Depends(require_role("admin", "accountant")),
     db: Session = Depends(get_db),
 ):
@@ -57,6 +75,8 @@ def create_product(
             cost_price=cost_price, category=category or None,
         )
         db.add(product)
+        db.flush()
+        _save_product_image(product, image)
         db.commit()
     except ValidationError as e:
         return templates.TemplateResponse("products/form.html", {
@@ -96,6 +116,7 @@ def update_product(
     sales_price: float = Form(...),
     cost_price: float = Form(...),
     category: str = Form(""),
+    image: UploadFile | None = File(None),
     user: User = Depends(require_role("admin")),
     db: Session = Depends(get_db),
 ):
@@ -112,6 +133,7 @@ def update_product(
         product.sales_price = sales_price
         product.cost_price = cost_price
         product.category = category or None
+        _save_product_image(product, image)
         db.commit()
     except ValidationError as e:
         return templates.TemplateResponse("products/form.html", {

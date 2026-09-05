@@ -250,6 +250,39 @@ def test_confirming_po_over_budget_shows_non_blocking_warning(client):
     assert "Confirmed" in r.text
 
 
+def test_dashboard_shows_order_status_counts(client):
+    login(client)
+    r = client.get("/")
+    assert "quickstatus" in r.text
+    assert "Confirmed" in r.text and "Draft" in r.text
+
+
+def test_contacts_and_products_kanban_view_renders(client):
+    login(client)
+    r = client.get("/contacts?view=kanban")
+    assert r.status_code == 200
+    assert "kanban-grid" in r.text
+    r = client.get("/products?view=kanban")
+    assert r.status_code == 200
+    assert "kanban-grid" in r.text
+
+
+def test_product_image_upload(client):
+    import base64
+    login(client)
+    png_bytes = base64.b64decode(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
+    )
+    r = client.post(
+        "/products/new",
+        data={"name": "Image Test Product", "type": "goods", "sales_price": "100", "cost_price": "50"},
+        files={"image": ("chair.png", png_bytes, "image/png")},
+        follow_redirects=True,
+    )
+    assert r.status_code == 200
+    assert "/static/uploads/products/" in r.text
+
+
 def test_vendor_bill_overpayment_rejected(client):
     login(client)
     r = client.post("/purchases/new", data={
