@@ -1,4 +1,5 @@
 from datetime import date
+from itertools import zip_longest
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import RedirectResponse
@@ -56,7 +57,7 @@ async def create_entry(request: Request, user: User = Depends(require_role("admi
     credits = form.getlist("credit")
 
     lines = []
-    for acc_id, partner_id, debit, credit in zip(account_ids, partner_ids, debits, credits):
+    for acc_id, partner_id, debit, credit in zip_longest(account_ids, partner_ids, debits, credits, fillvalue=""):
         if not acc_id:
             continue
         account = db.get(Account, int(acc_id))

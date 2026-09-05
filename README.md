@@ -137,17 +137,30 @@ state at any time, stop the server and delete `data/app.db`.
 python -m pytest -q
 ```
 
-Runs 40 tests across three files:
-- `tests/test_smoke.py` — the app starts, connects to SQLite, every major
-  page loads, master data can be created, a full purchase-to-payment
-  transaction works, reports render, login/signup/lockout/CSRF/404 behave
-  correctly.
-- `tests/test_domain.py` — tax calculation, purchase/sales totals,
+Runs 107 tests across six files:
+- `tests/test_smoke.py` (29) — the app starts, connects to SQLite, every
+  major page loads, master data can be created, a full purchase-to-payment
+  transaction works, reports render, login/signup/lockout/CSRF/404,
+  dashboard sections, Kanban views, status filters, drill-down.
+- `tests/test_domain.py` (15) — tax calculation, purchase/sales totals,
   debit/credit balance validation, the four core accounting postings,
   P&L, Balance Sheet, and budget variance — all as isolated unit tests
   against an in-memory database.
-- `tests/test_e2e.py` — the two critical end-to-end workflows (purchase
+- `tests/test_e2e.py` (2) — the two critical end-to-end workflows (purchase
   and sales) driven entirely through the HTTP layer, including the Confirm
+  step and validation guards (duplicate invoice, overpayment).
+- `tests/test_master_data.py` (25) — full CRUD, validation, archive, and
+  search/filter for every master-data module (Contacts, Products, Chart of
+  Accounts, Journals, Analytic Accounts, Budgets).
+- `tests/test_permissions.py` (16) — every role boundary from the spec's
+  permission table is actually enforced: unauthenticated redirects,
+  Accountant blocked from edit/archive, Contact blocked from every
+  admin/accountant page, and cross-customer data isolation (one Contact
+  user can never see another's invoice).
+- `tests/test_transactions.py` (20) — PO/SO state-machine edge cases
+  (double-confirm, cancel-after-billed, empty lines, zero/negative
+  amounts), partial payments, manual journal entry validation, report
+  date filters.
   step and validation guards (duplicate invoice, overpayment).
 
 ## 7. Demo Credentials / Roles
