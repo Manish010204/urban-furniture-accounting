@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 from itertools import zip_longest
 
@@ -227,6 +227,7 @@ def invoice_detail(invoice_id: int, request: Request,
         return RedirectResponse(url="/?error=You+can+only+view+your+own+invoices", status_code=303)
     return templates.TemplateResponse(request, "sales/invoice_detail.html", {
         "request": request, "user": user, "active": "sales", "invoice": invoice,
+        "generated_at": datetime.now().strftime("%d %b %Y, %I:%M %p"),
     })
 
 

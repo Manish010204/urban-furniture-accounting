@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 from itertools import zip_longest
 
@@ -245,6 +245,7 @@ def bill_detail(bill_id: int, request: Request,
         return RedirectResponse(url="/?error=You+can+only+view+your+own+bills", status_code=303)
     return templates.TemplateResponse(request, "purchases/bill_detail.html", {
         "request": request, "user": user, "active": "purchases", "bill": bill,
+        "generated_at": datetime.now().strftime("%d %b %Y, %I:%M %p"),
     })
 
 

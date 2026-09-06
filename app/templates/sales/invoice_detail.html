@@ -2,6 +2,13 @@
 {% block title %}{{ invoice.number }}{% endblock %}
 {% block heading %}Customer Invoice {{ invoice.number }}{% endblock %}
 {% block content %}
+<div class="toolbar">
+  <button class="btn small" type="button" onclick="window.print()">🖨 Print / Download PDF</button>
+</div>
+<div class="print-header">
+  <h1>Urban Furniture — Customer Invoice {{ invoice.number }}</h1>
+  <div class="print-meta">{{ invoice.customer.name }} · Generated {{ generated_at }}</div>
+</div>
 <div class="grid-2">
   <div class="panel">
     <div class="panel-header">
