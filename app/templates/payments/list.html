@@ -11,7 +11,11 @@
       <tbody>
       {% for p in payments %}
         <tr>
-          <td>PMT-{{ p.id }}</td>
+          <td>
+            {% if p.vendor_bill_id %}<a href="/purchases/bills/{{ p.vendor_bill_id }}">PMT-{{ p.id }}</a>
+            {% elif p.customer_invoice_id %}<a href="/sales/invoices/{{ p.customer_invoice_id }}">PMT-{{ p.id }}</a>
+            {% else %}PMT-{{ p.id }}{% endif %}
+          </td>
           <td>{% if p.direction.value == 'inbound' %}<span class="badge green">Received</span>{% else %}<span class="badge amber">Paid</span>{% endif %}</td>
           <td>{{ p.party.name }}</td>
           <td>{{ p.method.value|title }}</td>
