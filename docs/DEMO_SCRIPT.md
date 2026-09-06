@@ -4,18 +4,23 @@ Goal: show the complete accounting workflow —
 **Business Command Center → Master Data → Purchase → Confirm → Vendor Bill
 → Payment → Accounting**, then
 **Master Data → Sale → Confirm → Customer Invoice → Payment → Accounting**,
-then **Reports** — using data that's already populated so the app looks
-alive from the first click.
+then **Reports** — on top of ~5 months of real seeded history, so the app
+looks alive and lived-in from the first click instead of an empty shell.
 
-Start the app fresh so the seed data is in place and the numbers below
-match exactly:
+> **Numbers below are illustrative, not exact.** The seed data is generated
+> relative to whatever day the app first starts (`date.today()`), so exact
+> rupee figures and dates will differ from this doc every time — that's
+> expected. Read whatever the screen actually shows; don't insist it match
+> a number printed here. If asked why, that's a good thing to say out loud:
+> it proves the numbers are computed live, not hardcoded to match a script.
 
 ```bash
-rm -f data/app.db     # optional — only if you've run the demo before
 python -m uvicorn app.main:app --reload
 ```
 
-Open **http://127.0.0.1:8000**.
+Open **http://127.0.0.1:8000**. (Only delete `data/app.db` first if you
+specifically want a fresh reseed — the existing one already has a full
+history built up and is fine to demo from as-is.)
 
 ## 0. Login / Roles (30 sec)
 
@@ -37,34 +42,36 @@ Open **http://127.0.0.1:8000**.
   Control, each a plain-English label backed by a real calculated ratio
   (net margin, payables cover ratio, collection rate, budget utilization) —
   not an arbitrary score.
-- **Revenue vs Expenses** — a 6-month trend chart (plain inline SVG, no
-  charting library).
-- **Action Center** — dynamically generated from real data (overdue
-  invoices/bills, bills due soon, budgets near their limit, orders still in
-  draft). Right now it likely says "You're all caught up" — that's correct
-  and expected on a clean seed.
+- **Revenue vs Expenses** — a genuine 6-month trend with real variation
+  month to month (plain inline SVG, no charting library).
+- **Action Center** — dynamically generated from real data. You should see
+  several real items here: an overdue vendor bill, an overdue customer
+  invoice, a bill due soon, and orders still sitting in Draft. Point out
+  that none of this is fabricated — each line links straight to the record
+  it's describing.
 
 ## 2. Master Data (1 min)
 
-- **Contacts**: already has Azure Furniture (vendor), Nimesh Pathak
-  (customer), Rahul Sharma (vendor). Open Nimesh Pathak's detail page to
-  show the 360° view (Total Sales/Paid/Outstanding/Overdue) plus city/
-  state/pincode.
+- **Contacts**: Azure Furniture and Rahul Sharma (vendors), Nimesh Pathak
+  and Kavya Interiors (customers). Open Nimesh Pathak's detail page to
+  show the 360° view (Total Sales/Paid/Outstanding/Overdue) built from his
+  real multi-month order history.
 - **Products**: Office Chair, Wooden Table, Sofa, Dining Table, Wooden
   Chair — open Office Chair to show sales price ₹4,500, cost price ₹2,800,
-  and the computed **Gross Margin** (₹1,700).
+  and the computed **Gross Margin** (₹1,700 — fixed, since margin is just
+  sales price minus cost price, independent of how much has sold).
 - **Chart of Accounts**: point out Cash, Bank, Debtors, Creditors, Sales
   Income, Purchases Expense, Tax Payable, Capital — each with a **live
-  balance** (Bank already shows ₹150,000 from the seeded opening capital).
+  balance**, built up from every posted journal entry so far, not a single
+  opening figure.
 
-## 3. Purchase Flow — Azure Furniture (2 min)
+## 3. Purchase Flow — live, on top of existing history (2 min)
 
 1. **Purchase → Purchase Order → New Purchase Order.**
    - Vendor: **Azure Furniture**
    - Product: **Office Chair**, Quantity **10**, Unit Price **2800**
-     (auto-filled from the product's cost price)
    - Budget Analytics: **Store Operations** (optional, but pick it so the
-     Budget Report below shows a real actual/variance)
+     Budget Report below reflects this new spend against the plan)
    - Save → PO total shows **₹28,000**, status **Draft**.
 2. On the PO detail page, note the workflow pipeline (Draft → Confirmed →
    Vendor Bill → Paid). Click **Confirm** — status moves to Confirmed.
@@ -80,8 +87,9 @@ Open **http://127.0.0.1:8000**.
    ₹28,000 for the bill, and a second entry for the payment: Debit
    Creditors ₹28,000 / Credit Bank ₹28,000. Both balanced, and the Partner
    column shows Azure Furniture.
-6. Open **Chart of Accounts** — Bank has dropped to **₹122,000**, Creditors
-   is back to **₹0**.
+6. Open **Chart of Accounts** — Bank has dropped by exactly ₹28,000 from
+   whatever it showed before this step; Creditors nets back to where it
+   was (it was only briefly ₹28,000 higher, between steps 3 and 4).
 
 ## 4. Sales Flow — Nimesh Pathak (2 min)
 
@@ -102,31 +110,34 @@ Open **http://127.0.0.1:8000**.
 4. **Show the accounting effect**: Debit Debtors ₹23,625 / Credit Sales
    Income ₹22,500 / Credit Tax Payable ₹1,125 for the invoice; Debit Cash
    ₹23,625 / Credit Debtors ₹23,625 for the payment.
-5. Open **Chart of Accounts** — Cash now shows **₹23,625**, Debtors is back
-   to **₹0**, Tax Payable shows **₹1,125**.
+5. Open **Chart of Accounts** — Cash and Sales Income both moved up by
+   exactly this transaction's amounts from whatever they showed before.
 6. Back on the **Sales** page, show the status filter chips (All/Draft/
    Confirmed/Invoiced/... and Not Paid/Partially Paid/Paid/Overdue on the
-   invoices table below).
+   invoices table below) — point out there are already real rows in
+   several of these states from the seeded history, not just the one you
+   just created.
+
+## 4b. Print / Download (30 sec, optional but easy points)
+
+- On the Vendor Bill or Customer Invoice page you just created, click
+  **🖨 Print / Download PDF**. Show the clean printable layout (nav and
+  buttons hidden, a document header with the bill/invoice number and
+  timestamp) — choosing "Save as PDF" in the browser's print dialog gives
+  a real downloadable document. Same feature exists on all three reports.
 
 ## 5. Reports (2 min)
 
-- **Reports → Balance Sheet**: Assets (Cash ₹23,625 + Bank ₹122,000 +
-  Debtors ₹0 = **₹145,625**) exactly equal Liabilities + Capital
-  (Creditors ₹0 + Tax Payable ₹1,125 + Capital ₹150,000 + Retained
-  Earnings −₹5,500 = **₹145,625**). Click **View Transactions** next to any
-  row to drill down into the journal entries behind that number.
-- **Reports → Profit & Loss**: Sales Income ₹22,500, Purchases Expense
-  ₹28,000, Net Profit **−₹5,500**, Profit Margin shown as a percentage —
-  explain this single demo run bought more than it sold (10 chairs in, 5
-  out), which is exactly what the numbers should show; in a longer-running
-  dataset the margin recovers as more sales are recorded.
-- **Reports → Budget Report**: because the PO/SO above were tagged with
-  Store Operations / Retail Sales, the Q Retail Sales Budget shows
-  **Actual ₹22,500** against its ₹50,000 plan with a visual progress bar
-  (variance ₹27,500), and the Q Store Operations Budget shows **Actual
-  ₹28,000** against its ₹20,000 plan (variance −₹8,000, i.e. over budget,
-  progress bar turns red) — both computed from the analytic-tagged
-  postings, not hardcoded.
+- **Reports → Balance Sheet**: Assets exactly equal Liabilities + Capital
+  — that's the one number relationship that must always hold, regardless
+  of how much history exists. Click **View Transactions** next to any row
+  to drill down into the journal entries behind that number.
+- **Reports → Profit & Loss**: Sales Income, Purchases Expense, Net Profit,
+  and Profit Margin — all computed from the date range shown, live.
+- **Reports → Budget Report**: the Q Retail Sales Budget (₹90,000 plan) and
+  Q Store Operations Budget (₹60,000 plan) both show real Actual amounts
+  and a visual progress bar, computed from every analytic-tagged posting
+  in the current month — including the transaction you just created above.
 
 ## 6. Roles, quickly (1 min, optional)
 
@@ -145,4 +156,5 @@ Open **http://127.0.0.1:8000**.
 That's the full loop: **Business Command Center → Master Data →
 Transaction → Confirm → Bill/Invoice → Payment → Journal Entry → Account
 Balances → Reports**, end to end, with every number traceable back to an
-actual posted journal entry.
+actual posted journal entry — on top of real multi-month history, not a
+single staged transaction.
